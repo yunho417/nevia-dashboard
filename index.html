@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>파스토 배송 분석 대시보드 — 2026년 4월</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e2ddd8;
+    --text: #1a1916;
+    --text2: #6b6760;
+    --text3: #a09c98;
+    --accent: #2563eb;
+    --accent2: #059669;
+    --amber: #d97706;
+    --coral: #dc2626;
+    --purple: #7c3aed;
+    --teal: #0891b2;
+    --pink: #db2777;
+    --tag-h: #1e3a5f;
+    --tag-w: #1e4d3b;
+    --tag-m: #4c1d95;
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--text);
+    color: #fff;
+    padding: 32px 40px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .header-left p {
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 300;
+  }
+  .header-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #6b7280;
+    text-align: right;
+  }
+  .header-right span {
+    display: block;
+    color: #d1d5db;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1400px; margin: 0 auto; padding: 32px 40px; }
+
+  /* NAV TABS */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .nav-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+    border-radius: 6px 6px 0 0;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-sub { font-size: 12px; color: var(--text2); }
+  .kpi-card.accent { border-color: var(--accent); background: #eff6ff; }
+  .kpi-card.accent .kpi-value { color: var(--accent); }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* CHART WRAPPERS */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .filter-bar select, .filter-bar button {
+    font-size: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-bar select:hover, .filter-bar button:hover { border-color: var(--accent); }
+  .filter-bar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* DONUT LEGEND */
+  .donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .legend-left { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-pct { font-family: 'DM Mono', monospace; font-weight: 500; font-size: 13px; color: var(--text); }
+
+  /* REGION TABLE */
+  .region-table { width: 100%; border-collapse: collapse; }
+  .region-table tr { border-bottom: 1px solid var(--border); }
+  .region-table tr:last-child { border-bottom: none; }
+  .region-table td { padding: 10px 0; font-size: 13px; }
+  .region-table .bar-cell { width: 40%; }
+  .region-bar-bg {
+    background: var(--surface2);
+    border-radius: 3px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .region-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.6s ease;
+  }
+  .region-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    text-align: right;
+  }
+
+  /* REPEAT BADGE */
+  .repeat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  /* HOLIDAY SECTION */
+  .holiday-timeline { display: flex; flex-direction: column; gap: 0; }
+  .holiday-item {
+    display: grid;
+    grid-template-columns: 80px 16px 1fr;
+    gap: 0 16px;
+    align-items: start;
+    padding: 12px 0;
+    position: relative;
+  }
+  .holiday-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); padding-top: 2px; }
+  .timeline-line { display: flex; flex-direction: column; align-items: center; }
+  .timeline-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--surface);
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .timeline-connector {
+    width: 2px; flex: 1; min-height: 20px;
+    background: var(--border);
+    margin-top: 2px;
+  }
+  .holiday-content {}
+  .holiday-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .holiday-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .holiday-sales { font-size: 12px; font-family: 'DM Mono', monospace; margin-top: 4px; }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-right: 4px;
+  }
+  .tag-holiday { background: #fee2e2; color: #991b1b; }
+  .tag-peak { background: #dcfce7; color: #166534; }
+  .tag-low { background: #fef9c3; color: #854d0e; }
+  .tag-event { background: #e0e7ff; color: #3730a3; }
+
+  /* GENDER BREAKDOWN */
+  .gender-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .gender-card {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .gender-icon { font-size: 24px; margin-bottom: 8px; }
+  .gender-name { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .gender-count { font-size: 24px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .gender-pct { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* HEATMAP */
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .heatmap-day {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: default;
+    transition: transform 0.1s;
+    border: 1px solid transparent;
+  }
+  .heatmap-day:hover { transform: scale(1.1); z-index: 10; position: relative; }
+  .heatmap-day .day-num { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700; }
+  .heatmap-day .day-qty { font-size: 10px; }
+  .heatmap-day.empty { background: transparent; }
+  .heatmap-day.has-holiday { border-color: #dc2626 !important; }
+  .weekday-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .weekday-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    padding: 4px 0;
+  }
+  .weekday-label.sun { color: #dc2626; }
+  .weekday-label.sat { color: var(--accent); }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: fixed;
+    background: var(--text);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    line-height: 1.6;
+  }
+
+  /* SUMMARY ROW */
+  .summary-note {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #1e40af;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* INSIGHT PILLS */
+  .insight-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .insight-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .insight-pill strong { color: var(--text); }
+
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3, .grid-2-1 { grid-template-columns: 1fr; }
+    .container { padding: 20px 16px; }
+    .header { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>파스토 배송 분석 대시보드</h1>
+    <p>스마트스토어 NEVIA · 파스토 출고 데이터 기반 구매자 분석</p>
+  </div>
+  <div class="header-right">
+    <span>2026년 4월</span>
+    <div>Apr 02 — Apr 30, 2026</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI ROW -->
+  <div class="kpi-grid">
+    <div class="kpi-card accent">
+      <div class="kpi-label">총 출고건수</div>
+      <div class="kpi-value">175</div>
+      <div class="kpi-sub">134명 구매자</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">주력 상품</div>
+      <div class="kpi-value">172</div>
+      <div class="kpi-sub">시카티 제모크림 (98.3%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">최다 출고일</div>
+      <div class="kpi-value">17건</div>
+      <div class="kpi-sub">4월 27일 (월)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">재구매 고객</div>
+      <div class="kpi-value">12명</div>
+      <div class="kpi-sub">전체의 9%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">일평균 출고</div>
+      <div class="kpi-value">6.0건</div>
+      <div class="kpi-sub">29일 기준</div>
+    </div>
+  </div>
+
+  <!-- INSIGHT PILLS -->
+  <div class="insight-bar">
+    <div class="insight-pill">🗺 수도권 집중 — 경기+서울+인천 <strong>75%</strong></div>
+    <div class="insight-pill">👩 여성 추정 고객 <strong>62명 (46%)</strong></div>
+    <div class="insight-pill">📈 4월 후반 주 출고량 <strong>3배 성장</strong></div>
+    <div class="insight-pill">🔄 재구매 고객 중 <strong>김씨 성 집중</strong></div>
+    <div class="insight-pill">📦 신규 상품 풋 데오드란트 <strong>4월 30일 첫 출고</strong></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('trend')">📈 출고 트렌드</button>
+    <button class="nav-tab" onclick="showSection('buyer')">👥 구매자 분석</button>
+    <button class="nav-tab" onclick="showSection('region')">🗺 지역 분포</button>
+    <button class="nav-tab" onclick="showSection('calendar')">📅 달력 & 이벤트</button>
+  </div>
+
+  <!-- SECTION 1: TREND -->
+  <div class="section active" id="sec-trend">
+    <div class="filter-bar">
+      <label>상품</label>
+      <select id="trend-product" onchange="updateTrend()">
+        <option value="all">전체</option>
+        <option value="시카티 클린 바디헤어 제모크림">시카티 제모크림</option>
+        <option value="푸드어홀릭 풋 데오드란트">풋 데오드란트</option>
+      </select>
+      <label>차트</label>
+      <select id="trend-type" onchange="updateTrend()">
+        <option value="bar">막대</option>
+        <option value="line">라인</option>
+      </select>
+      <label>이동평균</label>
+      <select id="trend-ma" onchange="updateTrend()">
+        <option value="0">없음</option>
+        <option value="3" selected>3일</option>
+        <option value="7">7일</option>
+      </select>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>일별 출고 추이</div>
+      <div class="chart-wrap" style="height:280px;"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>주차별 출고량</div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="weekChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>요일별 평균 출고</div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="dowChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: BUYER -->
+  <div class="section" id="sec-buyer">
+    <div class="summary-note">
+      ⚠️ 성별 분석은 이름 마지막 글자의 통계적 경향을 기반으로 추정한 수치입니다. 정확한 인구통계 데이터가 아니며 참고용으로만 활용하세요.
+    </div>
+
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--purple)"></span>성별 추정 비율</div>
+        <div style="display:flex; gap:24px; align-items:center;">
+          <div class="chart-wrap" style="height:200px; width:200px; flex-shrink:0;"><canvas id="genderChart"></canvas></div>
+          <div style="flex:1;">
+            <div class="gender-grid">
+              <div class="gender-card">
+                <div class="gender-icon">👩</div>
+                <div class="gender-name">여성 추정</div>
+                <div class="gender-count" style="color:var(--pink);">62</div>
+                <div class="gender-pct">46.3%</div>
+              </div>
+              <div class="gender-card">
+                <div class="gender-icon">👨</div>
+                <div class="gender-name">남성 추정</div>
+                <div class="gender-count" style="color:var(--accent);">28</div>
+                <div class="gender-pct">20.9%</div>
+              </div>
+              <div class="gender-card">
+                <div class="gender-icon">❓</div>
+                <div class="gender-name">미분류</div>
+                <div class="gender-count" style="color:var(--text2);">44</div>
+                <div class="gender-pct">32.8%</div>
+              </div>
+            </div>
+            <div style="font-size:12px; color:var(--text2); margin-top:12px; line-height:1.6;">
+              제모크림 특성상 여성 구매자 비중이 높을 것으로 예상되며, 미분류 다수가 여성일 가능성이 높습니다.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>재구매 고객</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:8px; font-size:13px;">
+            <span>김*경</span>
+            <span class="repeat-badge">★ 3회</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:8px; font-size:13px;">
+            <span>김*민</span>
+            <span class="repeat-badge">★ 3회</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:8px; font-size:13px;">
+            <span>김*희</span>
+            <span class="repeat-badge">★ 3회</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:8px; font-size:13px; color:var(--text2);">
+            <span>김*선, 김*영, 김*인... 외 6명</span>
+            <span class="repeat-badge" style="background:#e0e7ff; color:#3730a3;">2회</span>
+          </div>
+          <div style="font-size:12px; color:var(--text2); margin-top:4px; border-top:1px solid var(--border); padding-top:10px; line-height:1.6;">
+            12명 (9%)이 재구매 · 모두 김씨 성 다수 포함<br>1개월 내 재구매율은 제모크림 효능 만족도 지표
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--teal)"></span>성별 추정 × 날짜별 출고</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="genderTrendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>성별별 지역 분포</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="genderRegionChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: REGION -->
+  <div class="section" id="sec-region">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent)"></span>시도별 출고 현황</div>
+        <table class="region-table">
+          <tbody id="regionTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>광역시도 비율</div>
+        <div class="chart-wrap" style="height:280px;"><canvas id="regionChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>수도권 vs 비수도권 비교</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div>
+          <div class="chart-wrap" style="height:200px;"><canvas id="metroChart"></canvas></div>
+        </div>
+        <div style="display:flex; flex-direction:column; justify-content:center; gap:12px;">
+          <div style="padding:16px; background:var(--surface2); border-radius:10px;">
+            <div style="font-size:12px; color:var(--text2); margin-bottom:4px;">수도권 (서울+경기+인천)</div>
+            <div style="font-size:24px; font-weight:700; font-family:'DM Mono',monospace; color:var(--accent);">106건</div>
+            <div style="font-size:12px; color:var(--text2);">전체의 60.6%</div>
+          </div>
+          <div style="padding:16px; background:var(--surface2); border-radius:10px;">
+            <div style="font-size:12px; color:var(--text2); margin-bottom:4px;">비수도권 (전국)</div>
+            <div style="font-size:24px; font-weight:700; font-family:'DM Mono',monospace; color:var(--accent2);">69건</div>
+            <div style="font-size:12px; color:var(--text2);">전체의 39.4%</div>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.6; padding-top:4px;">
+            경상도권(남+북) 23건(13.1%)이 비수도권 중 최다로, 지방 마케팅 확대 여지가 있습니다.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: CALENDAR -->
+  <div class="section" id="sec-calendar">
+
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>4월 출고 히트맵</div>
+        <div class="weekday-header">
+          <div class="weekday-label sun">일</div>
+          <div class="weekday-label">월</div>
+          <div class="weekday-label">화</div>
+          <div class="weekday-label">수</div>
+          <div class="weekday-label">목</div>
+          <div class="weekday-label">금</div>
+          <div class="weekday-label sat">토</div>
+        </div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:16px; font-size:11px; color:var(--text2);">
+          <span>낮음</span>
+          <div style="display:flex; gap:3px;">
+            <div style="width:16px;height:16px;border-radius:3px;background:#eff6ff;"></div>
+            <div style="width:16px;height:16px;border-radius:3px;background:#bfdbfe;"></div>
+            <div style="width:16px;height:16px;border-radius:3px;background:#60a5fa;"></div>
+            <div style="width:16px;height:16px;border-radius:3px;background:#2563eb;"></div>
+            <div style="width:16px;height:16px;border-radius:3px;background:#1e40af;"></div>
+          </div>
+          <span>높음</span>
+          <span style="margin-left:12px;">🔴 = 공휴일/특이일</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>이벤트 영향 요약</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="padding:12px; background:#fef2f2; border-radius:8px; border-left:3px solid var(--coral);">
+            <div style="font-size:11px; font-weight:700; color:#991b1b; margin-bottom:4px;">식목일 (4/5 토)</div>
+            <div style="font-size:12px; color:#7f1d1d;">출고 없음 — 주말+비영업일</div>
+          </div>
+          <div style="padding:12px; background:#fef2f2; border-radius:8px; border-left:3px solid var(--coral);">
+            <div style="font-size:11px; font-weight:700; color:#991b1b; margin-bottom:4px;">총선/선거일 (4/9 수)</div>
+            <div style="font-size:12px; color:#7f1d1d;">출고 4건 — 선거일에도 정상 출고</div>
+          </div>
+          <div style="padding:12px; background:#f0fdf4; border-radius:8px; border-left:3px solid var(--accent2);">
+            <div style="font-size:11px; font-weight:700; color:#166534; margin-bottom:4px;">4월 중순 급증 구간 (4/16~17)</div>
+            <div style="font-size:12px; color:#14532d;">9건 → 13건 · 마케팅 효과 추정</div>
+          </div>
+          <div style="padding:12px; background:#f0fdf4; border-radius:8px; border-left:3px solid var(--accent2);">
+            <div style="font-size:11px; font-weight:700; color:#166534; margin-bottom:4px;">4월 27일 최고점</div>
+            <div style="font-size:12px; color:#14532d;">17건 · 월요일 · 주말 주문 몰림 효과</div>
+          </div>
+          <div style="padding:12px; background:#eff6ff; border-radius:8px; border-left:3px solid var(--accent);">
+            <div style="font-size:11px; font-weight:700; color:#1e40af; margin-bottom:4px;">4/30 풋 데오드란트 첫 출고</div>
+            <div style="font-size:12px; color:#1e3a8a;">신규 상품 3건 동시 출고 시작</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>2026년 4월 이벤트 & 특기사항 타임라인</div>
+      <div class="holiday-timeline" id="holidayTimeline"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ===================== DATA =====================
+const RAW = [
+  {date:'2026-04-02',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-03',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-03',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-04',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-06',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'대구'},
+  {date:'2026-04-07',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'전라북'},
+  {date:'2026-04-07',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-07',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'인천'},
+  {date:'2026-04-08',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-08',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-09',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-09',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-09',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-09',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상남'},
+  {date:'2026-04-10',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-10',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-10',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-11',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상북'},
+  {date:'2026-04-11',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'부산'},
+  {date:'2026-04-12',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-12',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-12',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-12',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-12',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-13',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-13',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-13',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-13',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경상북'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상북'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-14',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'인천'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'전라남'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-15',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'부산'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'전라남'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상남'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'강원'},
+  {date:'2026-04-16',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'전라남'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상북'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상북'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-17',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-18',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-18',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'부산'},
+  {date:'2026-04-19',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-19',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-19',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-19',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'인천'},
+  {date:'2026-04-19',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상남'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경상북'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'광주'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'인천'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-20',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상북'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'부산'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-21',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-22',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-22',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-22',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상남'},
+  {date:'2026-04-22',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'강원'},
+  {date:'2026-04-22',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상남'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'전라남'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'광주'},
+  {date:'2026-04-23',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상북'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상남'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-24',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-25',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-25',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'인천'},
+  {date:'2026-04-25',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'강원'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'대전'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상남'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-26',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경상북'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'부산'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상남'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'전라남'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'인천'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경상북'},
+  {date:'2026-04-27',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'서울'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'전라남'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'대전'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경상남'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-28',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'남성',sido:'서울'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'전라북'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'충청남'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'경기'},
+  {date:'2026-04-29',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'광주'},
+  {date:'2026-04-30',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'경기'},
+  {date:'2026-04-30',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'여성',sido:'강원'},
+  {date:'2026-04-30',product:'시카티 클린 바디헤어 제모크림',qty:1,gender:'미분류',sido:'인천'},
+  {date:'2026-04-30',product:'푸드어홀릭 풋 데오드란트',qty:1,gender:'남성',sido:'경기'},
+  {date:'2026-04-30',product:'푸드어홀릭 풋 데오드란트',qty:1,gender:'여성',sido:'서울'},
+  {date:'2026-04-30',product:'푸드어홀릭 풋 데오드란트',qty:1,gender:'미분류',sido:'경기'},
+];
+
+const ALL_DATES = [...new Set(RAW.map(r=>r.date))].sort();
+const COLORS = {
+  '시카티 클린 바디헤어 제모크림': '#2563eb',
+  '푸드어홀릭 풋 데오드란트': '#059669',
+  '여성': '#db2777', '남성': '#2563eb', '미분류': '#9ca3af'
+};
+
+const HOLIDAYS = {
+  '2026-04-05': {name:'식목일', type:'holiday', desc:'나무 심는 날 · 주말(토) · 출고 없음'},
+  '2026-04-09': {name:'총선', type:'event', desc:'대한민국 공직선거일 · 임시공휴일 지정 가능 · 출고 4건 정상 진행'},
+  '2026-04-17': {name:'출고 1차 피크', type:'peak', desc:'13건 출고 — 주간 최고점 · 마케팅/바이럴 효과 추정'},
+  '2026-04-18': {name:'급락', type:'low', desc:'전날 13건 → 2건 급감 · 금요일 슬럼프 패턴'},
+  '2026-04-27': {name:'월간 최고점', type:'peak', desc:'17건 — 주말 주문 몰림 + 월요일 일괄 출고'},
+  '2026-04-30': {name:'풋 데오드란트 첫 출고', type:'event', desc:'신규 상품 3건 동시 출고 시작 · 시카티 제모크림과 병행 판매'},
+};
+
+// ===================== UTILS =====================
+function getDailyMap() {
+  const m = {};
+  RAW.forEach(r => {
+    if (!m[r.date]) m[r.date] = 0;
+    m[r.date] += r.qty;
+  });
+  return m;
+}
+function movingAvg(data, n) {
+  return data.map((_, i) => {
+    if (i < n-1) return null;
+    return data.slice(i-n+1, i+1).reduce((a,b)=>a+b,0)/n;
+  });
+}
+
+// ===================== CHARTS =====================
+const chartInstances = {};
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function updateTrend() {
+  const prod = document.getElementById('trend-product').value;
+  const ctype = document.getElementById('trend-type').value;
+  const ma = parseInt(document.getElementById('trend-ma').value);
+
+  const prods = prod === 'all'
+    ? ['시카티 클린 바디헤어 제모크림','푸드어홀릭 풋 데오드란트']
+    : [prod];
+
+  const datasets = prods.map(p => {
+    const data = ALL_DATES.map(d => RAW.filter(r=>r.date===d&&r.product===p).reduce((s,r)=>s+r.qty,0));
+    return {
+      label: p==='시카티 클린 바디헤어 제모크림'?'시카티 제모크림':'풋 데오드란트',
+      data, backgroundColor: COLORS[p]+'99', borderColor: COLORS[p],
+      borderWidth: ctype==='line'?2:0, fill: false, tension: 0.35, pointRadius: ctype==='line'?3:0,
+    };
+  });
+
+  if (ma > 0) {
+    const totalByDate = ALL_DATES.map(d => RAW.filter(r=>r.date===d&&(prod==='all'||r.product===prod)).reduce((s,r)=>s+r.qty,0));
+    const maData = movingAvg(totalByDate, ma);
+    datasets.push({
+      label: `${ma}일 이동평균`, data: maData,
+      borderColor: '#f59e0b', borderWidth: 2, borderDash: [4,4],
+      fill: false, tension: 0.35, pointRadius: 0, type: 'line',
+    });
+  }
+
+  const labels = ALL_DATES.map(d => d.slice(5).replace('-','/'));
+  destroyChart('trendChart');
+  chartInstances['trendChart'] = new Chart(document.getElementById('trendChart'), {
+    type: ctype,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, font: {size:11} } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}건` } }
+      },
+      scales: {
+        x: { stacked: ctype==='bar', ticks: { autoSkip: false, maxRotation: 45, font:{size:9}, color:'#9ca3af' }, grid:{display:false} },
+        y: { stacked: ctype==='bar', beginAtZero:true, ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'}, grid:{color:'rgba(0,0,0,0.05)'} }
+      }
+    }
+  });
+}
+
+function initWeekChart() {
+  const ranges = [['2026-04-02','2026-04-05'],['2026-04-06','2026-04-12'],['2026-04-13','2026-04-19'],['2026-04-20','2026-04-26'],['2026-04-27','2026-04-30']];
+  const labels = ['1주차','2주차','3주차','4주차','5주차'];
+  const prods = ['시카티 클린 바디헤어 제모크림','푸드어홀릭 풋 데오드란트'];
+  const datasets = prods.map(p => ({
+    label: p==='시카티 클린 바디헤어 제모크림'?'시카티':'풋 데오드란트',
+    data: ranges.map(([s,e])=>RAW.filter(r=>r.product===p&&r.date>=s&&r.date<=e).reduce((a,b)=>a+b.qty,0)),
+    backgroundColor: COLORS[p]+'cc', borderRadius: 4,
+  }));
+  destroyChart('weekChart');
+  chartInstances['weekChart'] = new Chart(document.getElementById('weekChart'), {
+    type:'bar', data:{labels,datasets},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{ x:{ticks:{font:{size:11},color:'#9ca3af'},grid:{display:false}}, y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}} }
+    }
+  });
+}
+
+function initDowChart() {
+  const days = ['일','월','화','수','목','금','토'];
+  const dowTotals = [0,0,0,0,0,0,0];
+  const dowCount = [0,0,0,0,0,0,0];
+  ALL_DATES.forEach(d => {
+    const dow = new Date(d).getDay();
+    const qty = RAW.filter(r=>r.date===d).reduce((s,r)=>s+r.qty,0);
+    dowTotals[dow]+=qty; dowCount[dow]++;
+  });
+  const avgs = dowTotals.map((t,i)=>dowCount[i]?+(t/dowCount[i]).toFixed(1):0);
+  destroyChart('dowChart');
+  chartInstances['dowChart'] = new Chart(document.getElementById('dowChart'), {
+    type:'bar', data:{labels:days, datasets:[{label:'평균 출고',data:avgs,
+      backgroundColor:['#fee2e2','#bfdbfe','#bfdbfe','#bfdbfe','#bfdbfe','#bfdbfe','#e0e7ff'],
+      borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:12},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+function initGenderChart() {
+  destroyChart('genderChart');
+  chartInstances['genderChart'] = new Chart(document.getElementById('genderChart'), {
+    type:'doughnut',
+    data:{labels:['여성','남성','미분류'],datasets:[{data:[62,28,44],
+      backgroundColor:['#db277799','#2563eb99','#9ca3af99'],
+      borderColor:['#db2777','#2563eb','#9ca3af'], borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}명`}}}
+    }
+  });
+}
+
+function initGenderTrendChart() {
+  const genders = ['여성','남성','미분류'];
+  const gColors = [COLORS['여성'],COLORS['남성'],COLORS['미분류']];
+  const datasets = genders.map((g,i)=>({
+    label:g, fill:true, tension:0.35, borderWidth:2,
+    borderColor: gColors[i],
+    backgroundColor: gColors[i]+'33',
+    pointRadius:2,
+    data: ALL_DATES.map(d=>RAW.filter(r=>r.date===d&&r.gender===g).reduce((s,r)=>s+r.qty,0))
+  }));
+  destroyChart('genderTrendChart');
+  chartInstances['genderTrendChart'] = new Chart(document.getElementById('genderTrendChart'), {
+    type:'line', data:{labels:ALL_DATES.map(d=>d.slice(5).replace('-','/')), datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{ticks:{autoSkip:true,maxTicksLimit:10,font:{size:9},color:'#9ca3af'},grid:{display:false}},
+        y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+function initGenderRegionChart() {
+  const genders = ['여성','남성','미분류'];
+  const topSidos = ['경기','서울','경상북','경상남','전라남','인천','부산'];
+  const datasets = genders.map((g,i)=>({
+    label:g,
+    data:topSidos.map(s=>RAW.filter(r=>r.gender===g&&r.sido===s).reduce((a,b)=>a+b.qty,0)),
+    backgroundColor:[COLORS['여성'],COLORS['남성'],COLORS['미분류']][i]+'cc',borderRadius:3,
+  }));
+  destroyChart('genderRegionChart');
+  chartInstances['genderRegionChart'] = new Chart(document.getElementById('genderRegionChart'), {
+    type:'bar', data:{labels:topSidos,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#9ca3af'},grid:{display:false}},
+        y:{stacked:true,beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+function initRegionChart() {
+  const sidoData = {};
+  RAW.forEach(r=>{ sidoData[r.sido]=(sidoData[r.sido]||0)+r.qty; });
+  const sorted = Object.entries(sidoData).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(s=>s[0]);
+  const data = sorted.map(s=>s[1]);
+  const max = data[0];
+
+  // Table
+  const tbody = document.getElementById('regionTable');
+  tbody.innerHTML = sorted.map(([s,v])=>`
+    <tr>
+      <td style="width:60px;font-weight:500;font-size:13px;">${s}</td>
+      <td class="bar-cell"><div class="region-bar-bg"><div class="region-bar-fill" style="width:${Math.round(v/max*100)}%"></div></div></td>
+      <td class="region-count">${v}건</td>
+      <td style="font-size:11px;color:#9ca3af;text-align:right;padding-left:8px;">${Math.round(v/175*100)}%</td>
+    </tr>`).join('');
+
+  const bgColors = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff',
+    '#059669','#10b981','#34d399','#6ee7b7','#a7f3d0','#d1fae5','#ecfdf5',
+    '#dc2626','#ef4444','#f87171'];
+
+  destroyChart('regionChart');
+  chartInstances['regionChart'] = new Chart(document.getElementById('regionChart'), {
+    type:'doughnut', data:{labels,datasets:[{data,backgroundColor:bgColors.slice(0,labels.length),borderWidth:1,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'50%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11},padding:6}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}건 (${Math.round(ctx.parsed/175*100)}%)`}}}
+    }
+  });
+
+  destroyChart('metroChart');
+  chartInstances['metroChart'] = new Chart(document.getElementById('metroChart'), {
+    type:'doughnut', data:{labels:['수도권','비수도권'],datasets:[{data:[106,69],
+      backgroundColor:['#2563eb99','#6b726099'],borderColor:['#2563eb','#6b7260'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}건`}}}
+    }
+  });
+}
+
+// ===================== HEATMAP =====================
+function initHeatmap() {
+  const dailyMap = getDailyMap();
+  const maxQty = Math.max(...Object.values(dailyMap));
+  const grid = document.getElementById('heatmapGrid');
+
+  // April 2026 starts on Wednesday (dow=3)
+  // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const startDow = new Date('2026-04-01').getDay(); // 3 = Wed
+  const totalDays = 30;
+
+  let html = '';
+  // Empty cells before start
+  for (let i=0; i<startDow; i++) html += `<div class="heatmap-day empty"></div>`;
+
+  function getColor(qty, max) {
+    if (!qty) return '#f1f5f9';
+    const ratio = qty/max;
+    if (ratio < 0.2) return '#bfdbfe';
+    if (ratio < 0.4) return '#60a5fa';
+    if (ratio < 0.6) return '#3b82f6';
+    if (ratio < 0.8) return '#2563eb';
+    return '#1e40af';
+  }
+  function getTextColor(qty, max) {
+    if (!qty) return '#94a3b8';
+    const ratio = qty/max;
+    return ratio < 0.4 ? '#1e3a8a' : '#ffffff';
+  }
+
+  for (let d=1; d<=totalDays; d++) {
+    const dateStr = `2026-04-${String(d).padStart(2,'0')}`;
+    const qty = dailyMap[dateStr]||0;
+    const holiday = HOLIDAYS[dateStr];
+    const color = getColor(qty, maxQty);
+    const tc = getTextColor(qty, maxQty);
+    const isHoliday = holiday && (holiday.type==='holiday'||holiday.type==='event');
+    const dow = (startDow + d - 1) % 7;
+    const isSun = dow===0, isSat = dow===6;
+
+    html += `<div class="heatmap-day${isHoliday?' has-holiday':''}"
+      style="background:${color};border-color:${isHoliday?'#dc2626':'transparent'}"
+      onmousemove="showTip(event,'${d}일 (${qty}건)${holiday?'\\n'+holiday.name+': '+holiday.desc:''}')"
+      onmouseleave="hideTip()">
+      <span class="day-num" style="color:${isSun?'#dc2626':isSat?'#2563eb':tc}">${d}</span>
+      ${qty?`<span class="day-qty" style="color:${tc}">${qty}</span>`:''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ===================== TIMELINE =====================
+function initTimeline() {
+  const events = [
+    {date:'04/02', name:'데이터 시작', type:'event', desc:'4월 출고 시작 · 첫날 1건', sales:'1건'},
+    {date:'04/05', name:'식목일 (토)', type:'holiday', desc:'공휴일 + 주말 · 출고 없음', sales:'0건'},
+    {date:'04/06', name:'주 1차 시작', type:'event', desc:'주중 재개 · 1건 출고', sales:'1건'},
+    {date:'04/09', name:'총선일', type:'event', desc:'공직선거일 · 법정 공휴일 지정 · 정상 출고 확인', sales:'4건'},
+    {date:'04/14~15', name:'주말 연계 피크', type:'peak', desc:'14일 7건 + 15일 7건 · 주말 포함 연속 고점', sales:'14건 (2일)'},
+    {date:'04/17', name:'중순 최대 피크', type:'peak', desc:'13건 출고 · 해당 주 최고 · SNS 바이럴 또는 광고 효과 추정', sales:'13건'},
+    {date:'04/18', name:'금요일 급락', type:'low', desc:'전일 13건 → 2건 · 금요일 패턴으로 주문 감소', sales:'2건'},
+    {date:'04/27', name:'월간 최고점', type:'peak', desc:'17건 · 주말 누적 주문 + 월요일 일괄 출고 효과', sales:'17건'},
+    {date:'04/28', name:'화요일 유지', type:'event', desc:'11건 · 고점 후 안정적 유지', sales:'11건'},
+    {date:'04/30', name:'신규 상품 첫 출고', type:'event', desc:'풋 데오드란트 3건 · 시카티 제모크림 3건 동시 출고 · 월말', sales:'6건'},
+  ];
+
+  const typeColor = {holiday:'#dc2626',peak:'#059669',low:'#d97706',event:'#2563eb'};
+  const typeLabel = {holiday:'공휴일',peak:'피크',low:'급락',event:'이벤트'};
+  let html = '';
+  events.forEach((e,i)=>{
+    html += `<div class="holiday-item">
+      <div class="holiday-date">${e.date}</div>
+      <div class="timeline-line">
+        <div class="timeline-dot" style="background:${typeColor[e.type]};border-color:${typeColor[e.type]}22;"></div>
+        ${i<events.length-1?'<div class="timeline-connector"></div>':''}
+      </div>
+      <div class="holiday-content">
+        <div class="holiday-name">
+          <span class="tag tag-${e.type}">${typeLabel[e.type]}</span>${e.name}
+        </div>
+        <div class="holiday-desc">${e.desc}</div>
+        <div class="holiday-sales" style="color:${typeColor[e.type]}">▶ 출고: ${e.sales}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('holidayTimeline').innerHTML = html;
+}
+
+// ===================== TOOLTIP =====================
+function showTip(e, text) {
+  const tip = document.getElementById('tooltip');
+  tip.style.display = 'block';
+  tip.innerHTML = text.replace(/\n/g,'<br>');
+  tip.style.left = (e.clientX+12)+'px';
+  tip.style.top = (e.clientY-10)+'px';
+}
+function hideTip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ===================== TABS =====================
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  event.target.classList.add('active');
+
+  if (id==='buyer' && !chartInstances['genderChart']) {
+    initGenderChart(); initGenderTrendChart(); initGenderRegionChart();
+  }
+  if (id==='region' && !chartInstances['regionChart']) {
+    initRegionChart();
+  }
+  if (id==='calendar' && !document.getElementById('heatmapGrid').innerHTML) {
+    initHeatmap(); initTimeline();
+  }
+}
+
+// ===================== INIT =====================
+window.onload = () => {
+  updateTrend();
+  initWeekChart();
+  initDowChart();
+};
+</script>
+</body>
+</html>
