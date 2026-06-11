@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEVIA 파스토 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd8;
+  --text:#1a1916;--text2:#6b6760;--text3:#a09c98;
+  --accent:#2563eb;--accent2:#059669;--amber:#d97706;--coral:#dc2626;
+  --purple:#7c3aed;--teal:#0891b2;--pink:#db2777;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.header{background:var(--text);color:#fff;padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-end}
+.header h1{font-size:20px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.header p{font-size:12px;color:#9ca3af;font-weight:300}
+.header-right{font-family:'DM Mono',monospace;font-size:11px;color:#6b7280;text-align:right}
+.header-right span{display:block;color:#d1d5db;font-size:13px;margin-bottom:2px}
+
+/* MONTH SELECTOR */
+.month-bar{background:#fff;border-bottom:1px solid var(--border);padding:0 40px;display:flex;align-items:center;gap:0}
+.month-btn{padding:14px 24px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
+.month-btn:hover{color:var(--text);background:var(--surface2)}
+.month-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.month-divider{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* CONTAINER */
+.container{max-width:1400px;margin:0 auto;padding:28px 40px}
+
+/* MONTH VIEW */
+.month-view{display:none}
+.month-view.active{display:block}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.kpi-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-1px;line-height:1;margin-bottom:3px}
+.kpi-sub{font-size:11px;color:var(--text2)}
+.kpi-card.hi{border-color:var(--accent);background:#eff6ff}
+.kpi-card.hi .kpi-value{color:var(--accent)}
+.kpi-card.up{border-color:var(--accent2);background:#f0fdf4}
+.kpi-card.up .kpi-value{color:var(--accent2)}
+
+/* INSIGHT */
+.insight-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--text2)}
+.pill strong{color:var(--text)}
+
+/* TABS */
+.nav-tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:24px}
+.nav-tab{padding:9px 18px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.nav-tab:hover{color:var(--text);background:var(--surface2)}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+
+/* SECTIONS */
+.sec{display:none}.sec.active{display:block}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px}
+.card-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.chart-wrap{position:relative;width:100%}
+
+/* FILTER */
+.filter-bar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar label{font-size:12px;color:var(--text2);font-weight:500}
+.filter-bar select{font-size:12px;font-family:'Noto Sans KR',sans-serif;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer}
+
+/* REGION TABLE */
+.rtable{width:100%;border-collapse:collapse}
+.rtable tr{border-bottom:1px solid var(--border)}
+.rtable tr:last-child{border-bottom:none}
+.rtable td{padding:9px 0;font-size:13px}
+.rbar-bg{background:var(--surface2);border-radius:3px;height:7px;overflow:hidden;width:100%}
+.rbar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .6s}
+.rmono{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);text-align:right}
+
+/* GENDER */
+.g-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+.g-card{background:var(--surface2);border-radius:10px;padding:14px;text-align:center}
+.g-icon{font-size:22px;margin-bottom:6px}
+.g-name{font-size:11px;color:var(--text2);margin-bottom:4px}
+.g-count{font-size:22px;font-weight:700;font-family:'DM Mono',monospace}
+.g-pct{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* REPEAT */
+.repeat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surface2);border-radius:8px;font-size:13px;margin-bottom:6px}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#fef3c7;color:#92400e}
+
+/* HEATMAP */
+.wday-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.wday-label{text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:3px 0}
+.wday-label.sun{color:var(--coral)}.wday-label.sat{color:var(--accent)}
+.hm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.hm-day{aspect-ratio:1;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default;border:1px solid transparent;transition:transform .1s;position:relative}
+.hm-day:hover{transform:scale(1.12);z-index:10}
+.hm-day .dn{font-family:'DM Mono',monospace;font-size:11px;font-weight:700}
+.hm-day .dq{font-size:9px}
+.hm-day.empty{background:transparent!important;border:none!important}
+.hm-day.holi{border-color:var(--coral)!important}
+.hm-legend{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--text2)}
+.hm-swatch{width:14px;height:14px;border-radius:3px}
+
+/* TIMELINE */
+.tl{display:flex;flex-direction:column}
+.tl-item{display:grid;grid-template-columns:72px 16px 1fr;gap:0 14px;align-items:start;padding:10px 0}
+.tl-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);padding-top:2px}
+.tl-line{display:flex;flex-direction:column;align-items:center}
+.tl-dot{width:13px;height:13px;border-radius:50%;border:2px solid #fff;flex-shrink:0;margin-top:3px}
+.tl-conn{width:2px;flex:1;min-height:18px;background:var(--border);margin-top:2px}
+.tl-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.tl-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.tl-sales{font-size:12px;font-family:'DM Mono',monospace;margin-top:3px}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:4px}
+.tag-holiday{background:#fee2e2;color:#991b1b}
+.tag-peak{background:#dcfce7;color:#166534}
+.tag-low{background:#fef9c3;color:#854d0e}
+.tag-event{background:#e0e7ff;color:#3730a3}
+
+/* CUMULATIVE SECTION */
+.cum-view{display:none}.cum-view.active{display:block}
+
+/* COMPARE BADGE */
+.vs-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+.vs-up{background:#dcfce7;color:#166534}
+.vs-down{background:#fee2e2;color:#991b1b}
+
+/* TOOLTIP */
+.tooltip{position:fixed;background:var(--text);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;pointer-events:none;z-index:999;display:none;line-height:1.6;max-width:220px}
+
+/* NOTICE */
+.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1e40af;margin-bottom:16px;line-height:1.6}
+
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.g21,.g12{grid-template-columns:1fr}
+  .container{padding:20px 16px}
+  .header{padding:20px 16px;flex-direction:column;gap:8px;align-items:flex-start}
+  .month-bar{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>NEVIA · 파스토 배송 분석 대시보드</h1>
+    <p>스마트스토어 파스토 출고 데이터 기반 · 구매자 트렌드 분석</p>
+  </div>
+  <div class="header-right">
+    <span>2026년 4~5월</span>
+    <div>최종 업데이트: 2026.06.11</div>
+  </div>
+</div>
+
+<!-- MONTH SELECTOR -->
+<div class="month-bar">
+  <button class="month-btn" onclick="showMonth(this,'apr')">4월</button>
+  <button class="month-btn" onclick="showMonth(this,'may')">5월</button>
+  <div class="month-divider"></div>
+  <button class="month-btn" onclick="showMonth(this,'cum')">📊 누적 비교</button>
+</div>
+
+<div class="container">
+
+<!-- ==================== 4월 ==================== -->
+<div class="month-view" id="mv-apr">
+
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">총 출고</div><div class="kpi-value">175</div><div class="kpi-sub">2026.04.02~04.30</div></div>
+    <div class="kpi-card"><div class="kpi-label">시카티 제모크림</div><div class="kpi-value">172</div><div class="kpi-sub">98.3%</div></div>
+    <div class="kpi-card"><div class="kpi-label">풋 데오드란트</div><div class="kpi-value">3</div><div class="kpi-sub">1.7% · 첫 출고</div></div>
+    <div class="kpi-card"><div class="kpi-label">최다 출고일</div><div class="kpi-value">17건</div><div class="kpi-sub">4월 27일 (월)</div></div>
+    <div class="kpi-card"><div class="kpi-label">일평균</div><div class="kpi-value">6.0건</div><div class="kpi-sub">29일 기준</div></div>
+  </div>
+
+  <div class="insight-bar">
+    <div class="pill">🗺 수도권 집중 — 경기+서울+인천 <strong>약 75%</strong></div>
+    <div class="pill">👩 여성 추정 <strong>46%</strong></div>
+    <div class="pill">📈 월말로 갈수록 <strong>우상향 트렌드</strong></div>
+    <div class="pill">🔄 재구매 <strong>12명(9%)</strong></div>
+    <div class="pill">📦 풋 데오드란트 <strong>4/30 첫 출고</strong></div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab(this,'apr','trend')">📈 트렌드</button>
+    <button class="nav-tab" onclick="switchTab(this,'apr','buyer')">👥 구매자</button>
+    <button class="nav-tab" onclick="switchTab(this,'apr','region')">🗺 지역</button>
+    <button class="nav-tab" onclick="switchTab(this,'apr','cal')">📅 달력</button>
+  </div>
+
+  <!-- APR TREND -->
+  <div class="sec active" id="apr-trend">
+    <div class="filter-bar">
+      <label>상품</label>
+      <select onchange="updateProd('apr',this.value)">
+        <option value="all">전체</option>
+        <option value="시카티 클린 바디헤어 제모크림">시카티 제모크림</option>
+        <option value="푸드어홀릭 풋 데오드란트">풋 데오드란트</option>
+      </select>
+      <label>차트</label>
+      <select onchange="updateCtype('apr',this.value)">
+        <option value="bar">막대</option><option value="line">라인</option>
+      </select>
+      <label>이동평균</label>
+      <select onchange="updateMa('apr',this.value)">
+        <option value="0">없음</option><option value="3" selected>3일</option><option value="7">7일</option>
+      </select>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>일별 출고 추이</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="apr-trend-chart"></canvas></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--accent2)"></span>주차별 출고</div><div class="chart-wrap" style="height:200px"><canvas id="apr-week-chart"></canvas></div></div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--amber)"></span>요일별 평균</div><div class="chart-wrap" style="height:200px"><canvas id="apr-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- APR BUYER -->
+  <div class="sec" id="apr-buyer">
+    <div class="notice">⚠️ 성별 분석은 이름 마지막 글자의 통계적 경향 기반 추정입니다. 참고용으로만 활용하세요.</div>
+    <div class="g21">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--purple)"></span>성별 추정 비율</div>
+        <div style="display:flex;gap:20px;align-items:center">
+          <div class="chart-wrap" style="height:180px;width:180px;flex-shrink:0"><canvas id="apr-gender-donut"></canvas></div>
+          <div style="flex:1">
+            <div class="g-cards">
+              <div class="g-card"><div class="g-icon">👩</div><div class="g-name">여성 추정</div><div class="g-count" style="color:var(--pink)">62</div><div class="g-pct">46%</div></div>
+              <div class="g-card"><div class="g-icon">👨</div><div class="g-name">남성 추정</div><div class="g-count" style="color:var(--accent)">28</div><div class="g-pct">21%</div></div>
+              <div class="g-card"><div class="g-icon">❓</div><div class="g-name">미분류</div><div class="g-count" style="color:var(--text2)">44</div><div class="g-pct">33%</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>재구매 TOP</div>
+        <div class="repeat-row">김*경 / 김*민 / 김*희<span class="badge">★ 3회</span></div>
+        <div class="repeat-row" style="color:var(--text2);font-size:12px">외 9명 2회 재구매<span class="badge" style="background:#e0e7ff;color:#3730a3">2회</span></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:10px;border-top:1px solid var(--border);padding-top:10px;line-height:1.6">
+          12명(9%) 재구매 · 4월은 첫 달이라 재구매율 기준선
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--teal)"></span>성별 × 일별 출고</div><div class="chart-wrap" style="height:200px"><canvas id="apr-gender-trend"></canvas></div></div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--coral)"></span>성별 × 지역</div><div class="chart-wrap" style="height:200px"><canvas id="apr-gender-region"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- APR REGION -->
+  <div class="sec" id="apr-region">
+    <div class="g2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent)"></span>시도별 출고</div>
+        <table class="rtable" id="apr-region-table"></table>
+      </div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--accent2)"></span>비율 차트</div><div class="chart-wrap" style="height:280px"><canvas id="apr-region-chart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>수도권 vs 비수도권</div>
+      <div class="g2">
+        <div class="chart-wrap" style="height:200px"><canvas id="apr-metro-chart"></canvas></div>
+        <div style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+          <div style="padding:14px;background:var(--surface2);border-radius:10px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">수도권 (서울+경기+인천)</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">106건</div>
+            <div style="font-size:11px;color:var(--text2)">전체의 60.6%</div>
+          </div>
+          <div style="padding:14px;background:var(--surface2);border-radius:10px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">비수도권</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2)">69건</div>
+            <div style="font-size:11px;color:var(--text2)">전체의 39.4%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APR CAL -->
+  <div class="sec" id="apr-cal">
+    <div class="g21">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>4월 출고 히트맵</div>
+        <div class="wday-header">
+          <div class="wday-label sun">일</div><div class="wday-label">월</div><div class="wday-label">화</div>
+          <div class="wday-label">수</div><div class="wday-label">목</div><div class="wday-label">금</div><div class="wday-label sat">토</div>
+        </div>
+        <div class="hm-grid" id="apr-heatmap"></div>
+        <div class="hm-legend">
+          <span>낮음</span>
+          <div class="hm-swatch" style="background:#bfdbfe"></div>
+          <div class="hm-swatch" style="background:#60a5fa"></div>
+          <div class="hm-swatch" style="background:#3b82f6"></div>
+          <div class="hm-swatch" style="background:#2563eb"></div>
+          <div class="hm-swatch" style="background:#1e40af"></div>
+          <span>높음 &nbsp; 🔴=특이일</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>특이일 요약</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:10px 12px;background:#fef2f2;border-radius:8px;border-left:3px solid var(--coral)">
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:3px">식목일 (4/5 토)</div>
+            <div style="font-size:12px;color:#7f1d1d">주말+공휴일 · 출고 없음</div>
+          </div>
+          <div style="padding:10px 12px;background:#fef2f2;border-radius:8px;border-left:3px solid var(--coral)">
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:3px">총선일 (4/9 수)</div>
+            <div style="font-size:12px;color:#7f1d1d">법정 공휴일 · 4건 정상 출고</div>
+          </div>
+          <div style="padding:10px 12px;background:#f0fdf4;border-radius:8px;border-left:3px solid var(--accent2)">
+            <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:3px">월간 최고점 (4/27 월)</div>
+            <div style="font-size:12px;color:#14532d">17건 · 주말 주문 몰림 효과</div>
+          </div>
+          <div style="padding:10px 12px;background:#eff6ff;border-radius:8px;border-left:3px solid var(--accent)">
+            <div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:3px">풋 데오드란트 첫 출고 (4/30)</div>
+            <div style="font-size:12px;color:#1e3a8a">신규 상품 3건 · 시장 진입 시작</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>4월 이벤트 타임라인</div>
+      <div class="tl" id="apr-timeline"></div>
+    </div>
+  </div>
+</div><!-- /mv-apr -->
+
+
+<!-- ==================== 5월 ==================== -->
+<div class="month-view" id="mv-may">
+
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">총 출고</div><div class="kpi-value">317</div><div class="kpi-sub">2026.05.01~05.31</div></div>
+    <div class="kpi-card up"><div class="kpi-label">4월 대비</div><div class="kpi-value">+81%</div><div class="kpi-sub">175건 → 317건</div></div>
+    <div class="kpi-card"><div class="kpi-label">시카티 제모크림</div><div class="kpi-value">220</div><div class="kpi-sub">69.4%</div></div>
+    <div class="kpi-card"><div class="kpi-label">풋 데오드란트</div><div class="kpi-value">97</div><div class="kpi-sub">30.6% · 급성장</div></div>
+    <div class="kpi-card"><div class="kpi-label">일평균</div><div class="kpi-value">10.2건</div><div class="kpi-sub">31일 기준 (↑70%)</div></div>
+  </div>
+
+  <div class="insight-bar">
+    <div class="pill">📈 전월 대비 <strong>+81% 성장</strong></div>
+    <div class="pill">👟 풋 데오드란트 <strong>4월 3건 → 5월 97건</strong> 폭발 성장</div>
+    <div class="pill">👩 여성 추정 <strong>37%</strong> (재구매 상위권 여성 집중)</div>
+    <div class="pill">🔄 재구매 <strong>30명(9.5%)</strong> · 최다 5회</div>
+    <div class="pill">🗺 수도권 <strong>55%</strong> · 지방 비중 증가</div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab(this,'may','trend')">📈 트렌드</button>
+    <button class="nav-tab" onclick="switchTab(this,'may','buyer')">👥 구매자</button>
+    <button class="nav-tab" onclick="switchTab(this,'may','region')">🗺 지역</button>
+    <button class="nav-tab" onclick="switchTab(this,'may','cal')">📅 달력</button>
+  </div>
+
+  <!-- MAY TREND -->
+  <div class="sec active" id="may-trend">
+    <div class="filter-bar">
+      <label>상품</label>
+      <select onchange="updateProd('may',this.value)">
+        <option value="all">전체</option>
+        <option value="시카티 클린 바디헤어 제모크림">시카티 제모크림</option>
+        <option value="푸드어홀릭 풋 데오드란트">풋 데오드란트</option>
+      </select>
+      <label>차트</label>
+      <select onchange="updateCtype('may',this.value)">
+        <option value="bar">막대</option><option value="line">라인</option>
+      </select>
+      <label>이동평균</label>
+      <select onchange="updateMa('may',this.value)">
+        <option value="0">없음</option><option value="3" selected>3일</option><option value="7">7일</option>
+      </select>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>일별 출고 추이</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="may-trend-chart"></canvas></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--accent2)"></span>주차별 출고</div><div class="chart-wrap" style="height:200px"><canvas id="may-week-chart"></canvas></div></div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--amber)"></span>요일별 평균</div><div class="chart-wrap" style="height:200px"><canvas id="may-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- MAY BUYER -->
+  <div class="sec" id="may-buyer">
+    <div class="notice">⚠️ 성별 분석은 이름 마지막 글자의 통계적 경향 기반 추정입니다. 참고용으로만 활용하세요.</div>
+    <div class="g21">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--purple)"></span>성별 추정 비율</div>
+        <div style="display:flex;gap:20px;align-items:center">
+          <div class="chart-wrap" style="height:180px;width:180px;flex-shrink:0"><canvas id="may-gender-donut"></canvas></div>
+          <div style="flex:1">
+            <div class="g-cards">
+              <div class="g-card"><div class="g-icon">👩</div><div class="g-name">여성 추정</div><div class="g-count" style="color:var(--pink)">118</div><div class="g-pct">37%</div></div>
+              <div class="g-card"><div class="g-icon">👨</div><div class="g-name">남성 추정</div><div class="g-count" style="color:var(--accent)">36</div><div class="g-pct">11%</div></div>
+              <div class="g-card"><div class="g-icon">❓</div><div class="g-name">미분류</div><div class="g-count" style="color:var(--text2)">110</div><div class="g-pct">35%</div></div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);margin-top:10px;line-height:1.6">
+              풋 데오드란트 남성 구매 증가로 남성 비율 상승 추정
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>재구매 TOP</div>
+        <div class="repeat-row">김*영<span class="badge">★ 5회</span></div>
+        <div class="repeat-row">김*정 / 김*희 / 박*영 / 김*현 / 이*희<span class="badge">★ 4회</span></div>
+        <div class="repeat-row" style="color:var(--text2);font-size:12px">외 24명 2~3회<span class="badge" style="background:#e0e7ff;color:#3730a3">2~3회</span></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:10px;border-top:1px solid var(--border);padding-top:10px;line-height:1.6">
+          30명(9.5%) 재구매 · 4월 재구매자 절반이 5월에도 재구매
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--teal)"></span>성별 × 일별 출고</div><div class="chart-wrap" style="height:200px"><canvas id="may-gender-trend"></canvas></div></div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--coral)"></span>성별 × 지역</div><div class="chart-wrap" style="height:200px"><canvas id="may-gender-region"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- MAY REGION -->
+  <div class="sec" id="may-region">
+    <div class="g2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent)"></span>시도별 출고</div>
+        <table class="rtable" id="may-region-table"></table>
+      </div>
+      <div class="card"><div class="card-title"><span class="dot" style="background:var(--accent2)"></span>비율 차트</div><div class="chart-wrap" style="height:280px"><canvas id="may-region-chart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>수도권 vs 비수도권</div>
+      <div class="g2">
+        <div class="chart-wrap" style="height:200px"><canvas id="may-metro-chart"></canvas></div>
+        <div style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+          <div style="padding:14px;background:var(--surface2);border-radius:10px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">수도권 (서울+경기+인천)</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">175건</div>
+            <div style="font-size:11px;color:var(--text2)">전체의 55.2% <span style="color:#dc2626">(4월 60.6%→하락)</span></div>
+          </div>
+          <div style="padding:14px;background:var(--surface2);border-radius:10px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">비수도권</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2)">142건</div>
+            <div style="font-size:11px;color:var(--text2)">전체의 44.8% <span style="color:#059669">(4월 39.4%→상승)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAY CAL -->
+  <div class="sec" id="may-cal">
+    <div class="g21">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>5월 출고 히트맵</div>
+        <div class="wday-header">
+          <div class="wday-label sun">일</div><div class="wday-label">월</div><div class="wday-label">화</div>
+          <div class="wday-label">수</div><div class="wday-label">목</div><div class="wday-label">금</div><div class="wday-label sat">토</div>
+        </div>
+        <div class="hm-grid" id="may-heatmap"></div>
+        <div class="hm-legend">
+          <span>낮음</span>
+          <div class="hm-swatch" style="background:#bfdbfe"></div>
+          <div class="hm-swatch" style="background:#60a5fa"></div>
+          <div class="hm-swatch" style="background:#3b82f6"></div>
+          <div class="hm-swatch" style="background:#2563eb"></div>
+          <div class="hm-swatch" style="background:#1e40af"></div>
+          <span>높음 &nbsp; 🔴=특이일</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--coral)"></span>특이일 요약</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:10px 12px;background:#fef2f2;border-radius:8px;border-left:3px solid var(--coral)">
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:3px">어린이날 (5/5 화)</div>
+            <div style="font-size:12px;color:#7f1d1d">공휴일 · 12건 — 높은 수준 유지</div>
+          </div>
+          <div style="padding:10px 12px;background:#fef2f2;border-radius:8px;border-left:3px solid var(--coral)">
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:3px">어버이날 (5/8 금)</div>
+            <div style="font-size:12px;color:#7f1d1d">기념일 · 14건 — 선물 수요 추정</div>
+          </div>
+          <div style="padding:10px 12px;background:#fef2f2;border-radius:8px;border-left:3px solid var(--coral)">
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:3px">부처님 오신 날 (5/15 금)</div>
+            <div style="font-size:12px;color:#7f1d1d">공휴일 · 월간 최고 <strong>19건</strong></div>
+          </div>
+          <div style="padding:10px 12px;background:#f0fdf4;border-radius:8px;border-left:3px solid var(--accent2)">
+            <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:3px">5/6 (월) 17건</div>
+            <div style="font-size:12px;color:#14532d">어린이날 연휴 후 주문 몰림 · 5월 공동 최고</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span>5월 이벤트 타임라인</div>
+      <div class="tl" id="may-timeline"></div>
+    </div>
+  </div>
+</div><!-- /mv-may -->
+
+
+<!-- ==================== 누적 비교 ==================== -->
+<div class="month-view" id="mv-cum">
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card hi"><div class="kpi-label">2개월 총 출고</div><div class="kpi-value">492</div><div class="kpi-sub">4월 175 + 5월 317</div></div>
+    <div class="kpi-card up"><div class="kpi-label">월별 성장률</div><div class="kpi-value">+81%</div><div class="kpi-sub">175 → 317건</div></div>
+    <div class="kpi-card"><div class="kpi-label">시카티 누적</div><div class="kpi-value">392</div><div class="kpi-sub">4월172 + 5월220</div></div>
+    <div class="kpi-card"><div class="kpi-label">풋 데오드란트 누적</div><div class="kpi-value">100</div><div class="kpi-sub">4월3 + 5월97</div></div>
+  </div>
+
+  <div class="insight-bar">
+    <div class="pill">📦 풋 데오드란트 <strong>3→97건 · 32배 성장</strong></div>
+    <div class="pill">🗺 지방 비중 <strong>39% → 45%</strong> 확대 추세</div>
+    <div class="pill">🔄 재구매율 유지 <strong>약 9%</strong></div>
+    <div class="pill">📅 공휴일 출고 <strong>정상 수준 유지</strong></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>월별 총 출고 비교</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="cum-monthly-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>상품별 월별 비교</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="cum-product-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span>4월 + 5월 전체 일별 추이 (누적)</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="cum-daily-chart"></canvas></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--pink)"></span>성별 추정 비교</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="cum-gender-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--teal)"></span>지역 월별 비교 (TOP 5)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="cum-region-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--amber)"></span>수도권 비중 변화</div>
+    <div class="g3">
+      <div style="text-align:center;padding:20px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">4월 수도권</div>
+        <div style="font-size:32px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">60.6%</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">106 / 175건</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;font-size:28px">→</div>
+      <div style="text-align:center;padding:20px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">5월 수도권</div>
+        <div style="font-size:32px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2)">55.2%</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">175 / 317건</div>
+        <div style="font-size:11px;color:var(--coral);margin-top:4px">▼ 5.4%p 하락 — 전국 확산 중</div>
+      </div>
+    </div>
+  </div>
+</div><!-- /mv-cum -->
+
+</div><!-- /container -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ===================== DATA =====================
+const APR_DATES = ['2026-04-02','2026-04-03','2026-04-04','2026-04-06','2026-04-07','2026-04-08','2026-04-09','2026-04-10','2026-04-11','2026-04-12','2026-04-13','2026-04-14','2026-04-15','2026-04-16','2026-04-17','2026-04-18','2026-04-19','2026-04-20','2026-04-21','2026-04-22','2026-04-23','2026-04-24','2026-04-25','2026-04-26','2026-04-27','2026-04-28','2026-04-29','2026-04-30'];
+const APR_SIKA = [1,2,1,1,3,2,4,3,2,5,4,7,7,9,13,2,5,11,11,5,13,10,3,8,17,11,9,3];
+const APR_FOOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3];
+const APR_GENDER = {여성:[0,1,0,0,1,1,1,1,1,2,1,2,2,3,4,1,2,3,4,2,4,3,1,3,5,3,2,1],남성:[0,0,1,0,0,1,1,1,0,1,1,1,0,1,2,0,1,2,3,1,2,2,1,1,5,4,2,0],미분류:[1,1,0,1,2,0,2,1,1,2,2,4,5,5,7,1,2,6,4,2,7,5,1,4,7,4,5,2]};
+const APR_SIDO = {경기:75,서울:21,인천:10,경상북:8,경상남:7,전라남:5,부산:4,강원:3,광주:2,대구:2,대전:1,충청남:1,전라북:1};
+
+const MAY_DATES = ['2026-05-01','2026-05-02','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-05-07','2026-05-08','2026-05-09','2026-05-10','2026-05-11','2026-05-12','2026-05-13','2026-05-14','2026-05-15','2026-05-16','2026-05-17','2026-05-18','2026-05-19','2026-05-20','2026-05-21','2026-05-22','2026-05-23','2026-05-24','2026-05-25','2026-05-26','2026-05-27','2026-05-28','2026-05-29','2026-05-30','2026-05-31'];
+const MAY_SIKA = [7,6,9,3,11,15,2,8,10,12,14,6,6,5,16,4,15,14,5,7,5,2,1,7,5,4,4,3,6,4,4];
+const MAY_FOOT = [3,0,7,3,1,2,5,6,0,4,2,3,6,1,3,10,1,0,0,6,4,3,2,2,5,2,3,4,5,2,2];
+const MAY_GENDER = {여성:[6,4,5,3,1,9,3,8,3,5,7,4,5,5,10,5,7,7,3,9,1,0,2,5,3,5,4,4,3,2,3],남성:[0,1,2,0,4,3,3,1,1,2,1,1,1,0,4,4,1,1,0,1,3,2,0,4,2,1,0,0,1,1,0],미분류:[4,1,9,3,7,5,1,5,6,9,8,4,6,1,5,5,8,6,2,3,5,3,1,0,5,0,3,3,7,3,3]};
+const MAY_SIDO = {경기:106,서울:45,인천:24,경상남:20,강원:16,부산:15,대전:13,광주:13,충청남:12,울산:11,대구:10,경상북:9,충청북:7,전라남:6,전라북:4,전북:3,세종:2,기타:1};
+
+const APR_HOLIDAYS = {'2026-04-05':{n:'식목일(토)',t:'holiday'},'2026-04-09':{n:'총선일',t:'event'},'2026-04-17':{n:'1차 피크',t:'peak'},'2026-04-27':{n:'월간 최고',t:'peak'},'2026-04-30':{n:'풋 첫 출고',t:'event'}};
+const MAY_HOLIDAYS = {'2026-05-05':{n:'어린이날',t:'holiday'},'2026-05-06':{n:'연휴 후 피크',t:'peak'},'2026-05-08':{n:'어버이날',t:'event'},'2026-05-15':{n:'부처님오신날(최고)',t:'holiday'},'2026-05-16':{n:'풋 데오드 최고',t:'peak'}};
+
+const COLORS = {'시카티 클린 바디헤어 제모크림':'#2563eb','푸드어홀릭 풋 데오드란트':'#059669',여성:'#db2777',남성:'#2563eb',미분류:'#9ca3af'};
+
+// ===================== STATE =====================
+const charts = {};
+const state = {
+  apr:{product:'all',ctype:'bar',ma:'3'},
+  may:{product:'all',ctype:'bar',ma:'3'},
+};
+const initialized = {apr:{},may:{},cum:false};
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ===================== MONTH NAV =====================
+function showMonth(btn,m){
+  document.querySelectorAll('.month-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.month-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mv-'+m).classList.add('active');
+  btn.classList.add('active');
+  if(m==='apr' && !initialized.apr.trend){initMonth('apr');}
+  if(m==='may' && !initialized.may.trend){initMonth('may');}
+  if(m==='cum' && !initialized.cum){initCum();}
+}
+
+// ===================== TAB NAV =====================
+function switchTab(btn,month,tab){
+  const view = document.getElementById('mv-'+month);
+  view.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  view.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(month+'-'+tab).classList.add('active');
+  if(!initialized[month][tab]){
+    if(tab==='buyer')initBuyer(month);
+    if(tab==='region')initRegion(month);
+    if(tab==='cal')initCal(month);
+  }
+}
+
+// ===================== TREND =====================
+function updateProd(m,v){state[m].product=v;renderTrend(m);}
+function updateCtype(m,v){state[m].ctype=v;renderTrend(m);}
+function updateMa(m,v){state[m].ma=v;renderTrend(m);}
+function updateMonthTrend(m,prod,ctype,ma){
+  if(prod!==null)state[m].product=prod;
+  if(ctype!==null)state[m].ctype=ctype;
+  if(ma!==null)state[m].ma=ma;
+  renderTrend(m);
+}
+
+function renderTrend(m){
+  const dates = m==='apr'?APR_DATES:MAY_DATES;
+  const sika = m==='apr'?APR_SIKA:MAY_SIKA;
+  const foot = m==='apr'?APR_FOOT:MAY_FOOT;
+  const {product,ctype,ma} = state[m];
+  const labels = dates.map(d=>d.slice(5).replace('-','/'));
+
+  let datasets=[];
+  if(product==='all'||product==='시카티 클린 바디헤어 제모크림'){
+    datasets.push({label:'시카티 제모크림',data:sika,backgroundColor:'#2563eb99',borderColor:'#2563eb',borderWidth:ctype==='line'?2:0,fill:false,tension:.35,pointRadius:ctype==='line'?3:0});
+  }
+  if(product==='all'||product==='푸드어홀릭 풋 데오드란트'){
+    datasets.push({label:'풋 데오드란트',data:foot,backgroundColor:'#05996999',borderColor:'#059669',borderWidth:ctype==='line'?2:0,fill:false,tension:.35,pointRadius:ctype==='line'?3:0});
+  }
+  if(parseInt(ma)>0){
+    const total = dates.map((_,i)=>sika[i]+foot[i]);
+    const maData = total.map((_,i)=>{
+      if(i<parseInt(ma)-1)return null;
+      return +(total.slice(i-parseInt(ma)+1,i+1).reduce((a,b)=>a+b,0)/parseInt(ma)).toFixed(1);
+    });
+    datasets.push({label:`${ma}일 이동평균`,data:maData,borderColor:'#f59e0b',borderWidth:2,borderDash:[4,4],fill:false,tension:.35,pointRadius:0,type:'line'});
+  }
+
+  destroyChart(`${m}-trend-chart`);
+  charts[`${m}-trend-chart`] = new Chart(document.getElementById(`${m}-trend-chart`),{
+    type:ctype,data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}건`}}},
+      scales:{
+        x:{stacked:ctype==='bar',ticks:{autoSkip:false,maxRotation:45,font:{size:9},color:'#9ca3af'},grid:{display:false}},
+        y:{stacked:ctype==='bar',beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
+  });
+}
+
+function initWeekChart(m){
+  const sika = m==='apr'?APR_SIKA:MAY_SIKA;
+  const foot = m==='apr'?APR_FOOT:MAY_FOOT;
+  const dates = m==='apr'?APR_DATES:MAY_DATES;
+  const total = dates.map((_,i)=>sika[i]+foot[i]);
+  const startDay = m==='apr'?3:5; // Apr: Wed=3, May: Fri=5
+  const weeks = m==='apr'?
+    [[0,3],[1,7],[8,14],[15,21],[22,28]]:
+    [[0,2],[3,9],[10,16],[17,23],[24,30]];
+  const wLabels = ['1주차','2주차','3주차','4주차','5주차'];
+  const sikaW = weeks.map(([s,e])=>sika.slice(s,e+1).reduce((a,b)=>a+b,0));
+  const footW = weeks.map(([s,e])=>foot.slice(s,e+1).reduce((a,b)=>a+b,0));
+
+  destroyChart(`${m}-week-chart`);
+  charts[`${m}-week-chart`] = new Chart(document.getElementById(`${m}-week-chart`),{
+    type:'bar',data:{labels:wLabels,datasets:[
+      {label:'시카티',data:sikaW,backgroundColor:'#2563eb99',borderRadius:4},
+      {label:'풋 데오드란트',data:footW,backgroundColor:'#05996999',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{stacked:true,ticks:{font:{size:11},color:'#9ca3af'},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+function initDowChart(m){
+  const sika = m==='apr'?APR_SIKA:MAY_SIKA;
+  const foot = m==='apr'?APR_FOOT:MAY_FOOT;
+  const dates = m==='apr'?APR_DATES:MAY_DATES;
+  const total = dates.map((_,i)=>sika[i]+foot[i]);
+  const dowT=[0,0,0,0,0,0,0],dowC=[0,0,0,0,0,0,0];
+  dates.forEach((d,i)=>{const dow=new Date(d).getDay();dowT[dow]+=total[i];dowC[dow]++;});
+  const avgs=dowT.map((t,i)=>dowC[i]?+(t/dowC[i]).toFixed(1):0);
+  destroyChart(`${m}-dow-chart`);
+  charts[`${m}-dow-chart`] = new Chart(document.getElementById(`${m}-dow-chart`),{
+    type:'bar',data:{labels:['일','월','화','수','목','금','토'],datasets:[{
+      label:'평균 출고',data:avgs,
+      backgroundColor:['#fee2e2','#bfdbfe','#bfdbfe','#bfdbfe','#bfdbfe','#bfdbfe','#e0e7ff'],borderRadius:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:12},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+function initMonth(m){
+  renderTrend(m);
+  initWeekChart(m);
+  initDowChart(m);
+  initialized[m].trend=true;
+}
+
+// ===================== BUYER =====================
+function initBuyer(m){
+  const gdata = m==='apr'?{여:62,남:28,미:44}:{여:118,남:36,미:110};
+  const gender = m==='apr'?APR_GENDER:MAY_GENDER;
+  const dates = m==='apr'?APR_DATES:MAY_DATES;
+  const sido = m==='apr'?APR_SIDO:MAY_SIDO;
+  const labels = dates.map(d=>d.slice(5).replace('-','/'));
+  const topSidos = Object.keys(sido).slice(0,6);
+
+  destroyChart(`${m}-gender-donut`);
+  charts[`${m}-gender-donut`] = new Chart(document.getElementById(`${m}-gender-donut`),{
+    type:'doughnut',data:{labels:['여성','남성','미분류'],datasets:[{data:[gdata.여,gdata.남,gdata.미],
+      backgroundColor:['#db277799','#2563eb99','#9ca3af99'],borderColor:['#db2777','#2563eb','#9ca3af'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}명`}}}}
+  });
+
+  destroyChart(`${m}-gender-trend`);
+  charts[`${m}-gender-trend`] = new Chart(document.getElementById(`${m}-gender-trend`),{
+    type:'line',data:{labels,datasets:[
+      {label:'여성',data:gender.여성,borderColor:'#db2777',backgroundColor:'#db277733',borderWidth:2,fill:true,tension:.35,pointRadius:2},
+      {label:'남성',data:gender.남성,borderColor:'#2563eb',backgroundColor:'#2563eb33',borderWidth:2,fill:true,tension:.35,pointRadius:2},
+      {label:'미분류',data:gender.미분류,borderColor:'#9ca3af',backgroundColor:'#9ca3af22',borderWidth:1,fill:true,tension:.35,pointRadius:1},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{ticks:{autoSkip:true,maxTicksLimit:10,font:{size:9},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  const grData = {여성:topSidos.map(s=>{
+    const g=m==='apr'?{경기:25,서울:9,인천:3,경상북:4,경상남:3,전라남:3,부산:3,강원:1}:{경기:51,서울:18,인천:6,경상남:9,강원:12,부산:4};
+    return g[s]||0;
+  }),남성:topSidos.map(s=>{
+    const g=m==='apr'?{경기:18,서울:4,인천:3,경상북:2,경상남:1,전라남:0,부산:1,강원:1}:{경기:12,서울:6,인천:5,경상남:4,강원:2,부산:4};
+    return g[s]||0;
+  })};
+
+  destroyChart(`${m}-gender-region`);
+  charts[`${m}-gender-region`] = new Chart(document.getElementById(`${m}-gender-region`),{
+    type:'bar',data:{labels:topSidos,datasets:[
+      {label:'여성',data:grData.여성,backgroundColor:'#db277799',borderRadius:3},
+      {label:'남성',data:grData.남성,backgroundColor:'#2563eb99',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#9ca3af'},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  initialized[m].buyer=true;
+}
+
+// ===================== REGION =====================
+function initRegion(m){
+  const sido = m==='apr'?APR_SIDO:MAY_SIDO;
+  const total = m==='apr'?175:317;
+  const metro = m==='apr'?106:175;
+  const sorted = Object.entries(sido).sort((a,b)=>b[1]-a[1]);
+  const max = sorted[0][1];
+
+  document.getElementById(`${m}-region-table`).innerHTML = sorted.map(([s,v])=>`
+    <tr>
+      <td style="width:55px;font-weight:500;font-size:13px">${s}</td>
+      <td style="padding:9px 8px"><div class="rbar-bg"><div class="rbar-fill" style="width:${Math.round(v/max*100)}%"></div></div></td>
+      <td class="rmono">${v}건</td>
+      <td style="font-size:11px;color:#9ca3af;text-align:right;padding-left:6px">${Math.round(v/total*100)}%</td>
+    </tr>`).join('');
+
+  const bgColors=['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#059669','#10b981','#34d399','#6ee7b7','#dc2626','#ef4444','#f87171','#d97706','#fbbf24','#7c3aed','#a78bfa','#0891b2','#22d3ee'];
+  destroyChart(`${m}-region-chart`);
+  charts[`${m}-region-chart`] = new Chart(document.getElementById(`${m}-region-chart`),{
+    type:'doughnut',data:{labels:sorted.map(s=>s[0]),datasets:[{data:sorted.map(s=>s[1]),backgroundColor:bgColors.slice(0,sorted.length),borderWidth:1,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'45%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11},padding:5}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}건 (${Math.round(ctx.parsed/total*100)}%)`}}}
+    }
+  });
+
+  destroyChart(`${m}-metro-chart`);
+  charts[`${m}-metro-chart`] = new Chart(document.getElementById(`${m}-metro-chart`),{
+    type:'doughnut',data:{labels:['수도권','비수도권'],datasets:[{data:[metro,total-metro],backgroundColor:['#2563eb99','#6b726099'],borderColor:['#2563eb','#6b7260'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}건`}}}
+    }
+  });
+
+  initialized[m].region=true;
+}
+
+// ===================== CALENDAR =====================
+function getHmColor(qty,max){
+  if(!qty)return'#f1f5f9';
+  const r=qty/max;
+  if(r<.2)return'#bfdbfe';if(r<.4)return'#60a5fa';if(r<.6)return'#3b82f6';if(r<.8)return'#2563eb';return'#1e40af';
+}
+function getHmText(qty,max){return(!qty||qty/max<.4)?'#1e3a8a':'#fff';}
+
+function buildHeatmap(elId,year,month,daysTotal,startDow,dailyMap,holidays){
+  const el=document.getElementById(elId);
+  let html='';
+  for(let i=0;i<startDow;i++)html+=`<div class="hm-day empty"></div>`;
+  for(let d=1;d<=daysTotal;d++){
+    const ds=`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const qty=dailyMap[ds]||0;
+    const holi=holidays[ds];
+    const max=Math.max(...Object.values(dailyMap));
+    const bg=getHmColor(qty,max),tc=getHmText(qty,max);
+    const dow=(startDow+d-1)%7;
+    const isSun=dow===0,isSat=dow===6;
+    html+=`<div class="hm-day${holi?' holi':''}" style="background:${bg};border-color:${holi?'#dc2626':'transparent'}"
+      onmousemove="showTip(event,'${d}일 (${qty}건)${holi?'\\n🔴 '+holi.n:''}')" onmouseleave="hideTip()">
+      <span class="dn" style="color:${isSun?'#dc2626':isSat?'#2563eb':tc}">${d}</span>
+      ${qty?`<span class="dq" style="color:${tc}">${qty}</span>`:''}
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+const APR_DAILY={};APR_DATES.forEach((d,i)=>{APR_DAILY[d]=APR_SIKA[i]+APR_FOOT[i];});
+const MAY_DAILY={};MAY_DATES.forEach((d,i)=>{MAY_DAILY[d]=MAY_SIKA[i]+MAY_FOOT[i];});
+
+const APR_TL_EVENTS = [
+  {d:'04/02',n:'데이터 시작',t:'event',desc:'첫 날 1건 출고',s:'1건'},
+  {d:'04/05',n:'식목일 (토)',t:'holiday',desc:'공휴일+주말 · 출고 없음',s:'0건'},
+  {d:'04/09',n:'총선일',t:'event',desc:'법정 공휴일 · 정상 출고',s:'4건'},
+  {d:'04/17',n:'1차 피크',t:'peak',desc:'13건 · 마케팅 효과 추정',s:'13건'},
+  {d:'04/18',n:'금요일 급락',t:'low',desc:'13→2건 · 금요일 패턴',s:'2건'},
+  {d:'04/27',n:'월간 최고점',t:'peak',desc:'17건 · 주말 주문 몰림',s:'17건'},
+  {d:'04/30',n:'풋 데오드 첫 출고',t:'event',desc:'신규 상품 3건 시작',s:'6건'},
+];
+const MAY_TL_EVENTS = [
+  {d:'05/01',n:'5월 시작',t:'event',desc:'10건 · 4월 일평균 대비 높은 출발',s:'10건'},
+  {d:'05/03',n:'주말 피크',t:'peak',desc:'16건 · 주말 주문 효과',s:'16건'},
+  {d:'05/05',n:'어린이날 (화)',t:'holiday',desc:'공휴일 · 12건 — 수요 유지',s:'12건'},
+  {d:'05/06',n:'연휴 후 피크',t:'peak',desc:'17건 · 연휴 후 주문 몰림',s:'17건'},
+  {d:'05/08',n:'어버이날 (금)',t:'event',desc:'기념일 · 14건 · 선물 수요 추정',s:'14건'},
+  {d:'05/15',n:'부처님 오신 날 (금)',t:'holiday',desc:'공휴일 · 월간 최고 19건',s:'19건'},
+  {d:'05/16',n:'풋 데오드 최고',t:'peak',desc:'10건 · 단일 상품 최고 기록',s:'14건'},
+  {d:'05/23',n:'주간 저점',t:'low',desc:'3건 · 주간 최저',s:'3건'},
+  {d:'05/31',n:'5월 마감',t:'event',desc:'317건 마감 · 4월 대비 +81%',s:'6건'},
+];
+
+function buildTimeline(elId, events){
+  const typeC={holiday:'#dc2626',peak:'#059669',low:'#d97706',event:'#2563eb'};
+  const typeL={holiday:'공휴일',peak:'피크',low:'저점',event:'이벤트'};
+  document.getElementById(elId).innerHTML = events.map((e,i)=>`
+    <div class="tl-item">
+      <div class="tl-date">${e.d}</div>
+      <div class="tl-line">
+        <div class="tl-dot" style="background:${typeC[e.t]}"></div>
+        ${i<events.length-1?'<div class="tl-conn"></div>':''}
+      </div>
+      <div>
+        <div class="tl-name"><span class="tag tag-${e.t}">${typeL[e.t]}</span>${e.n}</div>
+        <div class="tl-desc">${e.desc}</div>
+        <div class="tl-sales" style="color:${typeC[e.t]}">▶ ${e.s}</div>
+      </div>
+    </div>`).join('');
+}
+
+function initCal(m){
+  if(m==='apr'){
+    buildHeatmap('apr-heatmap',2026,4,30,3,APR_DAILY,APR_HOLIDAYS);
+    buildTimeline('apr-timeline',APR_TL_EVENTS);
+  } else {
+    buildHeatmap('may-heatmap',2026,5,31,5,MAY_DAILY,MAY_HOLIDAYS);
+    buildTimeline('may-timeline',MAY_TL_EVENTS);
+  }
+  initialized[m].cal=true;
+}
+
+// ===================== CUMULATIVE =====================
+function initCum(){
+  // Monthly bar
+  destroyChart('cum-monthly-chart');
+  charts['cum-monthly-chart'] = new Chart(document.getElementById('cum-monthly-chart'),{
+    type:'bar',data:{labels:['4월','5월'],datasets:[
+      {label:'시카티 제모크림',data:[172,220],backgroundColor:'#2563eb99',borderRadius:6},
+      {label:'풋 데오드란트',data:[3,97],backgroundColor:'#05996999',borderRadius:6},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{stacked:true,ticks:{font:{size:13},color:'#9ca3af'},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  // Product growth
+  destroyChart('cum-product-chart');
+  charts['cum-product-chart'] = new Chart(document.getElementById('cum-product-chart'),{
+    type:'bar',data:{labels:['4월','5월'],datasets:[
+      {label:'시카티 제모크림',data:[172,220],backgroundColor:'#2563ebcc',borderRadius:4},
+      {label:'풋 데오드란트',data:[3,97],backgroundColor:'#059669cc',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{ticks:{font:{size:13},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  // Full daily all months
+  const allDates=[...APR_DATES,...MAY_DATES];
+  const allSika=[...APR_SIKA,...MAY_SIKA];
+  const allFoot=[...APR_FOOT,...MAY_FOOT];
+  const allLabels=allDates.map(d=>d.slice(5).replace('-','/'));
+  const sepIdx=APR_DATES.length-1;
+
+  destroyChart('cum-daily-chart');
+  charts['cum-daily-chart'] = new Chart(document.getElementById('cum-daily-chart'),{
+    type:'bar',data:{labels:allLabels,datasets:[
+      {label:'시카티 제모크림',data:allSika,backgroundColor:allDates.map((_,i)=>i<=sepIdx?'#2563eb99':'#2563ebcc'),borderWidth:0},
+      {label:'풋 데오드란트',data:allFoot,backgroundColor:allDates.map((_,i)=>i<=sepIdx?'#05996966':'#059669aa'),borderWidth:0},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}건`}},
+        annotation:{annotations:{line1:{type:'line',xMin:sepIdx+.5,xMax:sepIdx+.5,borderColor:'#dc2626',borderWidth:1,borderDash:[4,4],label:{content:'5월 →',enabled:true,position:'start',font:{size:10}}}}}
+      },
+      scales:{
+        x:{stacked:true,ticks:{autoSkip:true,maxTicksLimit:20,font:{size:8},color:'#9ca3af'},grid:{display:false}},
+        y:{stacked:true,beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
+  });
+
+  // Gender compare
+  destroyChart('cum-gender-chart');
+  charts['cum-gender-chart'] = new Chart(document.getElementById('cum-gender-chart'),{
+    type:'bar',data:{labels:['여성','남성','미분류'],datasets:[
+      {label:'4월',data:[62,28,44],backgroundColor:'#2563eb99',borderRadius:4},
+      {label:'5월',data:[118,36,110],backgroundColor:'#2563ebcc',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{ticks:{font:{size:12},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'명'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  // Region compare top5
+  const topR=['경기','서울','인천','경상남','부산'];
+  const aprR=[75,21,10,7,4];
+  const mayR=[106,45,24,20,15];
+  destroyChart('cum-region-chart');
+  charts['cum-region-chart'] = new Chart(document.getElementById('cum-region-chart'),{
+    type:'bar',data:{labels:topR,datasets:[
+      {label:'4월',data:aprR,backgroundColor:'#2563eb99',borderRadius:4},
+      {label:'5월',data:mayR,backgroundColor:'#059669aa',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{ticks:{font:{size:11},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v+'건'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  initialized.cum=true;
+}
+
+// ===================== TOOLTIP =====================
+function showTip(e,text){
+  const t=document.getElementById('tooltip');
+  t.style.display='block';t.innerHTML=text.replace(/\n/g,'<br>');
+  t.style.left=(e.clientX+12)+'px';t.style.top=(e.clientY-10)+'px';
+}
+function hideTip(){document.getElementById('tooltip').style.display='none';}
+
+// ===================== INIT =====================
+window.onload=()=>{
+  // activate first tab
+  document.querySelectorAll('.month-btn')[0].classList.add('active');
+  document.getElementById('mv-apr').classList.add('active');
+  initMonth('apr');
+};
+</script>
+</body>
+</html>
