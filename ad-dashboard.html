@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEVIA · 광고 성과 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --positive: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #475569;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #0d1525 0%, var(--bg) 100%);
+  }
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .header-left h1 span { color: var(--accent); }
+  .header-left p { color: var(--text2); margin-top: 3px; font-size: 12px; }
+  .period-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+  }
+
+  /* Tab nav */
+  .tab-nav {
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+  }
+  .tab-btn {
+    padding: 14px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text2);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  /* Main layout */
+  .main { padding: 24px 32px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+  .kpi-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; letter-spacing: 0.3px; }
+  .kpi-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1;
+  }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+  .kpi-card.blue { --accent-color: var(--accent); }
+  .kpi-card.cyan { --accent-color: var(--accent2); }
+  .kpi-card.purple { --accent-color: var(--accent3); }
+  .kpi-card.green { --accent-color: var(--positive); }
+  .kpi-card.yellow { --accent-color: var(--warning); }
+  .kpi-card.red { --accent-color: var(--danger); }
+
+  /* Chart containers */
+  .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-grid-half { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-full { margin-bottom: 16px; }
+  .chart-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .chart-box h3 {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chart-box h3 .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .chart-box canvas { max-height: 240px; }
+  .chart-box.tall canvas { max-height: 300px; }
+
+  /* Metric selector */
+  .metric-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-left: auto;
+    cursor: pointer;
+  }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-size: 11px; font-weight: 500; color: var(--text3);
+    padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border);
+  }
+  .data-table th:first-child { text-align: left; }
+  .data-table td {
+    padding: 10px 12px; font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--text); border-bottom: 1px solid #141c2e; text-align: right;
+  }
+  .data-table td:first-child { font-family: 'Noto Sans KR', sans-serif; text-align: left; color: var(--text2); }
+  .data-table tr:hover td { background: var(--surface2); }
+  .bar-inline {
+    display: inline-block; height: 3px; border-radius: 2px;
+    background: var(--accent); opacity: 0.7; vertical-align: middle; margin-left: 6px;
+  }
+  .tag {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 10px; font-family: 'Noto Sans KR', sans-serif;
+  }
+  .tag-good { background: rgba(16,185,129,.15); color: var(--positive); }
+  .tag-warn { background: rgba(245,158,11,.15); color: var(--warning); }
+  .tag-bad  { background: rgba(239,68,68,.15); color: var(--danger); }
+
+  /* Insight box */
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .insight-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .insight-card .icon { font-size: 20px; margin-bottom: 8px; }
+  .insight-card h4 { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .insight-card p { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .insight-card strong { color: var(--accent2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>NEVIA <span>광고 분석</span></h1>
+    <p>스마트스토어 쇼핑검색 캠페인 · 쇼핑검색#1</p>
+  </div>
+  <div class="period-badge">2026.04.01 — 2026.05.29</div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('overview')">📊 전체 개요</button>
+  <button class="tab-btn" onclick="showTab('trend')">📈 일별 트렌드</button>
+  <button class="tab-btn" onclick="showTab('segment')">🎯 세그먼트 분석</button>
+  <button class="tab-btn" onclick="showTab('efficiency')">💡 효율 분석</button>
+</div>
+
+<div class="main">
+
+  <!-- ======= TAB: 전체 개요 ======= -->
+  <div class="tab-panel active" id="tab-overview">
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">총 노출수</div>
+        <div class="kpi-value">132,570</div>
+        <div class="kpi-sub">60일 누적</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="kpi-label">총 클릭수</div>
+        <div class="kpi-value">1,300</div>
+        <div class="kpi-sub">CTR 0.98%</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">총 광고비</div>
+        <div class="kpi-value">228,062</div>
+        <div class="kpi-sub">CPC 평균 ₩175</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">구매 전환수</div>
+        <div class="kpi-value">208</div>
+        <div class="kpi-sub">CVR 16.0%</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">전환 매출</div>
+        <div class="kpi-value">2,528,810</div>
+        <div class="kpi-sub">원</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">ROAS</div>
+        <div class="kpi-value">1,109%</div>
+        <div class="kpi-sub">매출/광고비</div>
+      </div>
+    </div>
+
+    <div class="chart-grid-3">
+      <div class="chart-box tall">
+        <h3><span class="dot"></span>월별 비교 — 주요 지표</h3>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+      <div class="chart-box tall">
+        <h3><span class="dot" style="background:var(--accent3)"></span>디바이스 분포</h3>
+        <canvas id="deviceChart"></canvas>
+      </div>
+      <div class="chart-box tall">
+        <h3><span class="dot" style="background:var(--accent2)"></span>광고그룹 분포</h3>
+        <canvas id="groupChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <h3><span class="dot" style="background:var(--positive)"></span>광고그룹 × 디바이스 성과 비교</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>세그먼트</th>
+            <th>노출수</th>
+            <th>클릭수</th>
+            <th>CTR</th>
+            <th>광고비</th>
+            <th>CPC</th>
+            <th>전환수</th>
+            <th>CVR</th>
+            <th>전환매출</th>
+            <th>ROAS</th>
+            <th>평가</th>
+          </tr>
+        </thead>
+        <tbody id="comboTable"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ======= TAB: 일별 트렌드 ======= -->
+  <div class="tab-panel" id="tab-trend">
+    <div class="chart-box chart-full" style="margin-bottom:16px;">
+      <h3>
+        <span class="dot"></span>일별 추이
+        <select class="metric-select" id="trendMetric" onchange="updateTrendChart()">
+          <option value="imp">노출수</option>
+          <option value="click">클릭수</option>
+          <option value="cost">광고비</option>
+          <option value="conv">전환수</option>
+          <option value="rev">전환매출</option>
+          <option value="ctr">CTR (%)</option>
+          <option value="cvr">CVR (%)</option>
+          <option value="roas">ROAS (%)</option>
+          <option value="cpc">CPC (₩)</option>
+        </select>
+      </h3>
+      <canvas id="trendChart" style="max-height:280px;"></canvas>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--warning)"></span>일별 광고비 vs 전환매출</h3>
+        <canvas id="costRevChart" style="max-height:220px;"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--accent2)"></span>일별 ROAS 추이</h3>
+        <canvas id="roasChart" style="max-height:220px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= TAB: 세그먼트 분석 ======= -->
+  <div class="tab-panel" id="tab-segment">
+
+    <div class="chart-grid-2">
+      <div class="chart-box">
+        <h3><span class="dot"></span>요일별 성과 — 전환수</h3>
+        <canvas id="dowConvChart" style="max-height:230px;"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--accent2)"></span>요일별 성과 — ROAS</h3>
+        <canvas id="dowRoasChart" style="max-height:230px;"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--accent3)"></span>요일별 노출 / 클릭 / 비용</h3>
+        <canvas id="dowDetailChart" style="max-height:230px;"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--positive)"></span>요일별 CVR (%)</h3>
+        <canvas id="dowCvrChart" style="max-height:230px;"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <h3><span class="dot" style="background:var(--warning)"></span>요일별 상세 테이블</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>요일</th>
+            <th>노출수</th>
+            <th>클릭수</th>
+            <th>CTR</th>
+            <th>광고비</th>
+            <th>CPC</th>
+            <th>전환수</th>
+            <th>CVR</th>
+            <th>전환매출</th>
+            <th>ROAS</th>
+          </tr>
+        </thead>
+        <tbody id="dowTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======= TAB: 효율 분석 ======= -->
+  <div class="tab-panel" id="tab-efficiency">
+
+    <div class="insight-grid">
+      <div class="insight-card">
+        <div class="icon">🏆</div>
+        <h4>구매전환율 (CVR)</h4>
+        <p>클릭 대비 구매 전환율 <strong>16.0%</strong>로 매우 높은 수준. 상품 페이지 품질과 가격 경쟁력이 우수함을 시사.</p>
+      </div>
+      <div class="insight-card">
+        <div class="icon">📱</div>
+        <h4>모바일 집중도</h4>
+        <p>노출의 <strong>94.4%</strong>, 클릭의 <strong>91.4%</strong>가 모바일. 모바일 최적화가 핵심 과제.</p>
+      </div>
+      <div class="insight-card">
+        <div class="icon">💰</div>
+        <h4>ROAS 1,109%</h4>
+        <p>광고비 대비 매출이 <strong>11.1배</strong>. 특히 미용 그룹의 전환매출이 전체의 71% 차지.</p>
+      </div>
+      <div class="insight-card">
+        <div class="icon">📅</div>
+        <h4>최고 요일: 일요일</h4>
+        <p>일요일 전환수 <strong>36건</strong>, 전환매출 <strong>452,470원</strong>으로 주중 대비 20~30% 높음.</p>
+      </div>
+      <div class="insight-card">
+        <div class="icon">📉</div>
+        <h4>토요일 효율 저하</h4>
+        <p>토요일 전환수 <strong>18건</strong>으로 최저. CVR도 낮아 토요일 예산 조정 검토 권장.</p>
+      </div>
+      <div class="insight-card">
+        <div class="icon">📈</div>
+        <h4>5월 성장세</h4>
+        <p>5월 노출수 <strong>+81%</strong>, 클릭수 <strong>+73%</strong>, 전환수 <strong>+60%</strong>로 전월 대비 큰 폭 성장.</p>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-box">
+        <h3><span class="dot"></span>그룹별 효율 비교 (CVR / ROAS)</h3>
+        <canvas id="groupEffChart" style="max-height:240px;"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3><span class="dot" style="background:var(--accent2)"></span>디바이스별 효율 비교</h3>
+        <canvas id="devEffChart" style="max-height:240px;"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <h3><span class="dot" style="background:var(--positive)"></span>광고비 대비 전환수 (버블: 전환매출 크기)</h3>
+      <canvas id="bubbleChart" style="max-height:260px;"></canvas>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const DAILY = [{"date":"2026-04-01","imp":605,"click":7,"cost":927,"conv":4,"rev":61240,"ctr":1.16,"cvr":57.1,"roas":6606.0,"cpc":132.0},{"date":"2026-04-02","imp":1310,"click":13,"cost":2054,"conv":0,"rev":0,"ctr":0.99,"cvr":0.0,"roas":0.0,"cpc":158.0},{"date":"2026-04-03","imp":645,"click":4,"cost":698,"conv":1,"rev":9540,"ctr":0.62,"cvr":25.0,"roas":1367.0,"cpc":174.0},{"date":"2026-04-04","imp":804,"click":10,"cost":1510,"conv":1,"rev":9540,"ctr":1.24,"cvr":10.0,"roas":632.0,"cpc":151.0},{"date":"2026-04-05","imp":740,"click":17,"cost":2487,"conv":1,"rev":9540,"ctr":2.3,"cvr":5.9,"roas":384.0,"cpc":146.0},{"date":"2026-04-06","imp":707,"click":8,"cost":1322,"conv":1,"rev":10900,"ctr":1.13,"cvr":12.5,"roas":825.0,"cpc":165.0},{"date":"2026-04-07","imp":691,"click":7,"cost":1009,"conv":2,"rev":21800,"ctr":1.01,"cvr":28.6,"roas":2161.0,"cpc":144.0},{"date":"2026-04-08","imp":954,"click":9,"cost":1415,"conv":0,"rev":0,"ctr":0.94,"cvr":0.0,"roas":0.0,"cpc":157.0},{"date":"2026-04-09","imp":1074,"click":9,"cost":1510,"conv":3,"rev":39940,"ctr":0.84,"cvr":33.3,"roas":2645.0,"cpc":168.0},{"date":"2026-04-10","imp":1003,"click":13,"cost":1961,"conv":3,"rev":29980,"ctr":1.3,"cvr":23.1,"roas":1529.0,"cpc":151.0},{"date":"2026-04-11","imp":1074,"click":6,"cost":880,"conv":0,"rev":0,"ctr":0.56,"cvr":0.0,"roas":0.0,"cpc":147.0},{"date":"2026-04-12","imp":1301,"click":16,"cost":2654,"conv":3,"rev":49480,"ctr":1.23,"cvr":18.8,"roas":1864.0,"cpc":166.0},{"date":"2026-04-13","imp":1189,"click":13,"cost":2071,"conv":2,"rev":19080,"ctr":1.09,"cvr":15.4,"roas":921.0,"cpc":159.0},{"date":"2026-04-14","imp":1078,"click":20,"cost":3337,"conv":4,"rev":41320,"ctr":1.86,"cvr":20.0,"roas":1238.0,"cpc":167.0},{"date":"2026-04-15","imp":1276,"click":15,"cost":2545,"conv":3,"rev":31780,"ctr":1.18,"cvr":20.0,"roas":1249.0,"cpc":170.0},{"date":"2026-04-16","imp":1353,"click":18,"cost":2867,"conv":3,"rev":42990,"ctr":1.33,"cvr":16.7,"roas":1499.0,"cpc":159.0},{"date":"2026-04-17","imp":1304,"click":16,"cost":2821,"conv":3,"rev":48880,"ctr":1.23,"cvr":18.8,"roas":1733.0,"cpc":176.0},{"date":"2026-04-18","imp":1206,"click":13,"cost":2065,"conv":4,"rev":41320,"ctr":1.08,"cvr":30.8,"roas":2001.0,"cpc":159.0},{"date":"2026-04-19","imp":1623,"click":19,"cost":3023,"conv":1,"rev":9540,"ctr":1.17,"cvr":5.3,"roas":316.0,"cpc":159.0},{"date":"2026-04-20","imp":1721,"click":14,"cost":2337,"conv":3,"rev":51040,"ctr":0.81,"cvr":21.4,"roas":2184.0,"cpc":167.0},{"date":"2026-04-21","imp":1655,"click":14,"cost":2437,"conv":3,"rev":39340,"ctr":0.85,"cvr":21.4,"roas":1614.0,"cpc":174.0},{"date":"2026-04-22","imp":1925,"click":17,"cost":2759,"conv":2,"rev":19080,"ctr":0.88,"cvr":11.8,"roas":692.0,"cpc":162.0},{"date":"2026-04-23","imp":1656,"click":18,"cost":3585,"conv":2,"rev":32140,"ctr":1.09,"cvr":11.1,"roas":897.0,"cpc":199.0},{"date":"2026-04-24","imp":1611,"click":23,"cost":4377,"conv":5,"rev":64820,"ctr":1.43,"cvr":21.7,"roas":1481.0,"cpc":190.0},{"date":"2026-04-25","imp":2245,"click":24,"cost":3756,"conv":3,"rev":29980,"ctr":1.07,"cvr":12.5,"roas":798.0,"cpc":156.0},{"date":"2026-04-26","imp":3506,"click":38,"cost":7452,"conv":4,"rev":56890,"ctr":1.08,"cvr":10.5,"roas":763.0,"cpc":196.0},{"date":"2026-04-27","imp":3652,"click":32,"cost":5776,"conv":4,"rev":54720,"ctr":0.88,"cvr":12.5,"roas":947.0,"cpc":180.0},{"date":"2026-04-28","imp":3230,"click":19,"cost":3545,"conv":4,"rev":48880,"ctr":0.59,"cvr":21.1,"roas":1379.0,"cpc":187.0},{"date":"2026-04-29","imp":3295,"click":24,"cost":4598,"conv":7,"rev":78060,"ctr":0.73,"cvr":29.2,"roas":1698.0,"cpc":192.0},{"date":"2026-04-30","imp":2738,"click":20,"cost":4245,"conv":4,"rev":40880,"ctr":0.73,"cvr":20.0,"roas":963.0,"cpc":212.0},{"date":"2026-05-01","imp":2913,"click":23,"cost":4269,"conv":3,"rev":37180,"ctr":0.79,"cvr":13.0,"roas":871.0,"cpc":186.0},{"date":"2026-05-02","imp":3292,"click":18,"cost":2884,"conv":0,"rev":0,"ctr":0.55,"cvr":0.0,"roas":0.0,"cpc":160.0},{"date":"2026-05-03","imp":3738,"click":25,"cost":4710,"conv":3,"rev":29980,"ctr":0.67,"cvr":12.0,"roas":637.0,"cpc":188.0},{"date":"2026-05-04","imp":3005,"click":25,"cost":4399,"conv":5,"rev":49060,"ctr":0.83,"cvr":20.0,"roas":1115.0,"cpc":176.0},{"date":"2026-05-05","imp":3113,"click":23,"cost":4034,"conv":7,"rev":82540,"ctr":0.74,"cvr":30.4,"roas":2046.0,"cpc":175.0},{"date":"2026-05-06","imp":3070,"click":29,"cost":5535,"conv":5,"rev":62100,"ctr":0.94,"cvr":17.2,"roas":1122.0,"cpc":191.0},{"date":"2026-05-07","imp":2735,"click":24,"cost":4626,"conv":5,"rev":47700,"ctr":0.88,"cvr":20.8,"roas":1031.0,"cpc":193.0},{"date":"2026-05-08","imp":2494,"click":25,"cost":4809,"conv":2,"rev":21800,"ctr":1.0,"cvr":8.0,"roas":453.0,"cpc":192.0},{"date":"2026-05-09","imp":2819,"click":13,"cost":2522,"conv":2,"rev":19080,"ctr":0.46,"cvr":15.4,"roas":757.0,"cpc":194.0},{"date":"2026-05-10","imp":2934,"click":25,"cost":4486,"conv":8,"rev":107280,"ctr":0.85,"cvr":32.0,"roas":2391.0,"cpc":179.0},{"date":"2026-05-11","imp":3296,"click":24,"cost":3951,"conv":2,"rev":29800,"ctr":0.73,"cvr":8.3,"roas":754.0,"cpc":165.0},{"date":"2026-05-12","imp":2728,"click":33,"cost":5881,"conv":5,"rev":50420,"ctr":1.21,"cvr":15.2,"roas":857.0,"cpc":178.0},{"date":"2026-05-13","imp":3100,"click":30,"cost":5584,"conv":4,"rev":39520,"ctr":0.97,"cvr":13.3,"roas":708.0,"cpc":186.0},{"date":"2026-05-14","imp":3416,"click":31,"cost":4986,"conv":5,"rev":59780,"ctr":0.91,"cvr":16.1,"roas":1199.0,"cpc":161.0},{"date":"2026-05-15","imp":3818,"click":48,"cost":8919,"conv":8,"rev":90970,"ctr":1.26,"cvr":16.7,"roas":1020.0,"cpc":186.0},{"date":"2026-05-16","imp":3431,"click":47,"cost":8057,"conv":6,"rev":79820,"ctr":1.37,"cvr":12.8,"roas":991.0,"cpc":171.0},{"date":"2026-05-17","imp":3632,"click":53,"cost":9354,"conv":14,"rev":157260,"ctr":1.46,"cvr":26.4,"roas":1681.0,"cpc":176.0},{"date":"2026-05-18","imp":2887,"click":31,"cost":4754,"conv":8,"rev":102850,"ctr":1.07,"cvr":25.8,"roas":2163.0,"cpc":153.0},{"date":"2026-05-19","imp":2439,"click":27,"cost":4498,"conv":4,"rev":49680,"ctr":1.11,"cvr":14.8,"roas":1104.0,"cpc":167.0},{"date":"2026-05-20","imp":4024,"click":36,"cost":6568,"conv":3,"rev":38880,"ctr":0.89,"cvr":8.3,"roas":592.0,"cpc":182.0},{"date":"2026-05-21","imp":3268,"click":31,"cost":5502,"conv":5,"rev":65870,"ctr":0.95,"cvr":16.1,"roas":1197.0,"cpc":177.0},{"date":"2026-05-22","imp":3060,"click":31,"cost":6395,"conv":3,"rev":48280,"ctr":1.01,"cvr":9.7,"roas":755.0,"cpc":206.0},{"date":"2026-05-23","imp":3226,"click":34,"cost":5835,"conv":2,"rev":19080,"ctr":1.05,"cvr":5.9,"roas":327.0,"cpc":172.0},{"date":"2026-05-24","imp":2008,"click":18,"cost":3420,"conv":2,"rev":32500,"ctr":0.9,"cvr":11.1,"roas":950.0,"cpc":190.0},{"date":"2026-05-25","imp":3013,"click":34,"cost":6410,"conv":3,"rev":43040,"ctr":1.13,"cvr":8.8,"roas":671.0,"cpc":189.0},{"date":"2026-05-26","imp":3150,"click":29,"cost":5143,"conv":6,"rev":77500,"ctr":0.92,"cvr":20.7,"roas":1507.0,"cpc":177.0},{"date":"2026-05-27","imp":2576,"click":36,"cost":5424,"conv":4,"rev":44700,"ctr":1.4,"cvr":11.1,"roas":824.0,"cpc":151.0},{"date":"2026-05-28","imp":2214,"click":21,"cost":3084,"conv":3,"rev":38540,"ctr":0.95,"cvr":14.3,"roas":1250.0,"cpc":147.0}];
+
+const GROUP = [{"name":"질병","imp":42310,"click":533,"cost":98295,"conv":65,"rev":721370},{"name":"미용","imp":90260,"click":767,"cost":129767,"conv":143,"rev":1807440}];
+const DEVICE = [{"device":"PC","imp":7479,"click":112,"cost":19422,"conv":16,"rev":206600},{"device":"모바일","imp":125091,"click":1188,"cost":208640,"conv":192,"rev":2322210}];
+const DOW = [{"day":"월","imp":19470,"click":181,"cost":31020,"conv":28,"rev":360490},{"day":"화","imp":18084,"click":172,"cost":29884,"conv":35,"rev":411480},{"day":"수","imp":20825,"click":203,"cost":35355,"conv":32,"rev":375360},{"day":"목","imp":19764,"click":185,"cost":32459,"conv":30,"rev":367840},{"day":"금","imp":16848,"click":183,"cost":34249,"conv":29,"rev":362350},{"day":"토","imp":18097,"click":165,"cost":27509,"conv":18,"rev":198820},{"day":"일","imp":19482,"click":211,"cost":37586,"conv":36,"rev":452470}];
+const MONTHLY = [{"month":"2026-04","imp":47171,"click":476,"cost":82023,"conv":80,"rev":992700},{"month":"2026-05","imp":85399,"click":824,"cost":146039,"conv":128,"rev":1536110}];
+const COMBO = [{"name":"질병 / 모바일","imp":42310,"click":533,"cost":98295,"conv":65,"rev":721370},{"name":"미용 / PC","imp":7479,"click":112,"cost":19422,"conv":16,"rev":206600},{"name":"미용 / 모바일","imp":82781,"click":655,"cost":110345,"conv":127,"rev":1600840}];
+
+// ============================================================
+// HELPERS
+// ============================================================
+const N = (v,d=0) => Math.round(v).toLocaleString('ko-KR');
+const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0';
+const roas = (rev,cost) => cost ? (rev/cost*100).toFixed(0) : '0';
+const cpc = (cost,click) => click ? Math.round(cost/click) : 0;
+const cvr = (conv,click) => click ? (conv/click*100).toFixed(1) : '0';
+
+const CHART_DEFAULTS = {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#475569', font: { size: 10 } }, grid: { color: '#1a2235' } },
+    y: { ticks: { color: '#475569', font: { size: 10 } }, grid: { color: '#1a2235' } }
+  }
+};
+
+function mkChart(id, type, data, opts={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, { type, data, options: { responsive: true, maintainAspectRatio: true, ...CHART_DEFAULTS, ...opts } });
+}
+
+// ============================================================
+// TAB
+// ============================================================
+function showTab(t) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ============================================================
+// OVERVIEW CHARTS
+// ============================================================
+// Monthly bar
+mkChart('monthlyChart', 'bar', {
+  labels: MONTHLY.map(m => m.month),
+  datasets: [
+    { label: '노출수', data: MONTHLY.map(m => m.imp), backgroundColor: 'rgba(59,130,246,.6)', yAxisID: 'y' },
+    { label: '클릭수', data: MONTHLY.map(m => m.click), backgroundColor: 'rgba(6,182,212,.6)', yAxisID: 'y1' },
+    { label: '전환수', data: MONTHLY.map(m => m.conv), backgroundColor: 'rgba(16,185,129,.6)', yAxisID: 'y1' },
+  ]
+}, {
+  ...CHART_DEFAULTS,
+  scales: {
+    x: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } },
+    y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' }, position: 'left' },
+    y1: { ticks: { color: '#475569' }, grid: { display: false }, position: 'right' }
+  }
+});
+
+// Device doughnut
+mkChart('deviceChart', 'doughnut', {
+  labels: DEVICE.map(d => d.device),
+  datasets: [{
+    data: DEVICE.map(d => d.click),
+    backgroundColor: ['rgba(59,130,246,.8)', 'rgba(6,182,212,.8)'],
+    borderColor: ['#3b82f6','#06b6d4'],
+    borderWidth: 2
+  }]
+}, {
+  plugins: {
+    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12, font: { size: 11 } } },
+    tooltip: {
+      callbacks: { label: ctx => ` ${ctx.label}: ${N(ctx.raw)}클릭 (${pct(ctx.raw, DEVICE.reduce((a,d)=>a+d.click,0))}%)` }
+    }
+  }
+});
+
+// Group doughnut
+mkChart('groupChart', 'doughnut', {
+  labels: GROUP.map(g => g.name),
+  datasets: [{
+    data: GROUP.map(g => g.rev),
+    backgroundColor: ['rgba(139,92,246,.8)', 'rgba(245,158,11,.8)'],
+    borderColor: ['#8b5cf6','#f59e0b'],
+    borderWidth: 2
+  }]
+}, {
+  plugins: {
+    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12, font: { size: 11 } } },
+    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ₩${N(ctx.raw)} (전환매출)` } }
+  }
+});
+
+// Combo table
+(function() {
+  const tbody = document.getElementById('comboTable');
+  const maxRev = Math.max(...COMBO.map(c => c.rev));
+  COMBO.forEach(c => {
+    const r = roas(c.rev, c.cost);
+    const tag = r >= 1000 ? `<span class="tag tag-good">우수</span>` : r >= 500 ? `<span class="tag tag-warn">보통</span>` : `<span class="tag tag-bad">주의</span>`;
+    tbody.innerHTML += `<tr>
+      <td>${c.name}</td>
+      <td>${N(c.imp)}</td>
+      <td>${N(c.click)}</td>
+      <td>${pct(c.click,c.imp)}%</td>
+      <td>₩${N(c.cost)}</td>
+      <td>₩${N(cpc(c.cost,c.click))}</td>
+      <td>${N(c.conv)}</td>
+      <td>${cvr(c.conv,c.click)}%</td>
+      <td>₩${N(c.rev)}<span class="bar-inline" style="width:${Math.round(c.rev/maxRev*60)}px"></span></td>
+      <td>${r}%</td>
+      <td>${tag}</td>
+    </tr>`;
+  });
+})();
+
+// ============================================================
+// TREND CHARTS
+// ============================================================
+let trendChart = null;
+function updateTrendChart() {
+  const metric = document.getElementById('trendMetric').value;
+  const labels = DAILY.map(d => d.date.slice(5));
+  const data = DAILY.map(d => {
+    if (metric === 'roas' && !isFinite(d[metric])) return 0;
+    if (metric === 'cvr' && !isFinite(d[metric])) return 0;
+    return d[metric];
+  });
+  const color = { imp:'#3b82f6', click:'#06b6d4', cost:'#8b5cf6', conv:'#10b981', rev:'#f59e0b', ctr:'#ec4899', cvr:'#14b8a6', roas:'#f97316', cpc:'#a78bfa' }[metric];
+
+  if (trendChart) trendChart.destroy();
+  trendChart = mkChart('trendChart', 'line', {
+    labels,
+    datasets: [{ label: metric, data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.3, pointRadius: 2 }]
+  });
+}
+updateTrendChart();
+
+// Cost vs Rev
+mkChart('costRevChart', 'bar', {
+  labels: DAILY.map(d => d.date.slice(5)),
+  datasets: [
+    { label: '광고비', data: DAILY.map(d => d.cost), backgroundColor: 'rgba(139,92,246,.5)', order: 2 },
+    { label: '전환매출', data: DAILY.map(d => d.rev), backgroundColor: 'rgba(245,158,11,.5)', order: 2 },
+  ]
+}, { scales: { x: { ticks: { color: '#475569', maxTicksLimit: 10 }, grid: { color: '#1a2235' } }, y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } } }, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } } });
+
+// ROAS line
+const validDays = DAILY.filter(d => d.roas > 0 && isFinite(d.roas));
+mkChart('roasChart', 'line', {
+  labels: DAILY.map(d => d.date.slice(5)),
+  datasets: [{
+    label: 'ROAS (%)',
+    data: DAILY.map(d => isFinite(d.roas) ? d.roas : null),
+    borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,.1)',
+    fill: true, tension: 0.3, pointRadius: 2, spanGaps: true
+  }, {
+    label: '기준선 (1000%)',
+    data: DAILY.map(() => 1000),
+    borderColor: 'rgba(239,68,68,.4)', borderDash: [4,4], pointRadius: 0, fill: false
+  }]
+}, { scales: { x: { ticks: { color: '#475569', maxTicksLimit: 10 }, grid: { color: '#1a2235' } }, y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } } }, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } } });
+
+// ============================================================
+// SEGMENT CHARTS
+// ============================================================
+const DOW_COLORS = ['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ef4444','#f97316'];
+
+mkChart('dowConvChart', 'bar', {
+  labels: DOW.map(d => d.day),
+  datasets: [{ label: '전환수', data: DOW.map(d => d.conv), backgroundColor: DOW_COLORS, borderRadius: 5 }]
+}, { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } }, y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } } } });
+
+mkChart('dowRoasChart', 'bar', {
+  labels: DOW.map(d => d.day),
+  datasets: [{ label: 'ROAS (%)', data: DOW.map(d => Math.round(d.rev/d.cost*100)), backgroundColor: DOW_COLORS, borderRadius: 5 }]
+}, { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } }, y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } } } });
+
+mkChart('dowDetailChart', 'bar', {
+  labels: DOW.map(d => d.day),
+  datasets: [
+    { label: '노출수', data: DOW.map(d => d.imp), backgroundColor: 'rgba(59,130,246,.6)', yAxisID: 'y' },
+    { label: '클릭수', data: DOW.map(d => d.click), backgroundColor: 'rgba(6,182,212,.8)', yAxisID: 'y1' },
+    { label: '광고비', data: DOW.map(d => d.cost), backgroundColor: 'rgba(139,92,246,.6)', yAxisID: 'y1' },
+  ]
+}, {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+  scales: {
+    x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } },
+    y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' }, position: 'left' },
+    y1: { ticks: { color: '#475569' }, grid: { display: false }, position: 'right' }
+  }
+});
+
+mkChart('dowCvrChart', 'bar', {
+  labels: DOW.map(d => d.day),
+  datasets: [{ label: 'CVR (%)', data: DOW.map(d => parseFloat(cvr(d.conv, d.click))), backgroundColor: DOW_COLORS, borderRadius: 5 }]
+}, { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } }, y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' } } } });
+
+// DOW table
+(function() {
+  const tbody = document.getElementById('dowTable');
+  DOW.forEach((d,i) => {
+    const r = Math.round(d.rev/d.cost*100);
+    const c = parseFloat(cvr(d.conv, d.click));
+    tbody.innerHTML += `<tr>
+      <td style="color:${DOW_COLORS[i]};font-weight:600;">${d.day}요일</td>
+      <td>${N(d.imp)}</td>
+      <td>${N(d.click)}</td>
+      <td>${pct(d.click,d.imp)}%</td>
+      <td>₩${N(d.cost)}</td>
+      <td>₩${N(cpc(d.cost,d.click))}</td>
+      <td>${d.conv}</td>
+      <td>${c}%</td>
+      <td>₩${N(d.rev)}</td>
+      <td>${r}%</td>
+    </tr>`;
+  });
+})();
+
+// ============================================================
+// EFFICIENCY CHARTS
+// ============================================================
+const allSegs = [
+  ...GROUP.map(g => ({ name: g.name, cvr: parseFloat(cvr(g.conv,g.click)), roas: parseInt(roas(g.rev,g.cost)), cost: g.cost, conv: g.conv, rev: g.rev })),
+];
+mkChart('groupEffChart', 'bar', {
+  labels: GROUP.map(g => g.name),
+  datasets: [
+    { label: 'CVR (%)', data: GROUP.map(g => parseFloat(cvr(g.conv,g.click))), backgroundColor: ['rgba(59,130,246,.7)','rgba(245,158,11,.7)'], yAxisID: 'y', borderRadius: 4 },
+    { label: 'ROAS (/10%)', data: GROUP.map(g => parseInt(roas(g.rev,g.cost))/10), backgroundColor: ['rgba(16,185,129,.7)','rgba(139,92,246,.7)'], yAxisID: 'y1', borderRadius: 4 },
+  ]
+}, {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } },
+    y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' }, position: 'left', title: { display: true, text: 'CVR %', color: '#475569' } },
+    y1: { ticks: { color: '#475569' }, grid: { display: false }, position: 'right', title: { display: true, text: 'ROAS/10', color: '#475569' } }
+  }
+});
+
+mkChart('devEffChart', 'bar', {
+  labels: DEVICE.map(d => d.device),
+  datasets: [
+    { label: 'CVR (%)', data: DEVICE.map(d => parseFloat(cvr(d.conv,d.click))), backgroundColor: ['rgba(59,130,246,.7)','rgba(6,182,212,.7)'], yAxisID: 'y', borderRadius: 4 },
+    { label: 'ROAS (/10%)', data: DEVICE.map(d => parseInt(roas(d.rev,d.cost))/10), backgroundColor: ['rgba(139,92,246,.7)','rgba(16,185,129,.7)'], yAxisID: 'y1', borderRadius: 4 },
+  ]
+}, {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#94a3b8' }, grid: { color: '#1a2235' } },
+    y: { ticks: { color: '#475569' }, grid: { color: '#1a2235' }, position: 'left' },
+    y1: { ticks: { color: '#475569' }, grid: { display: false }, position: 'right' }
+  }
+});
+
+// Bubble: x=cost, y=conv, r=rev
+mkChart('bubbleChart', 'bubble', {
+  datasets: COMBO.map((c,i) => ({
+    label: c.name,
+    data: [{ x: c.cost, y: c.conv, r: Math.max(8, Math.sqrt(c.rev/400)) }],
+    backgroundColor: [
+      'rgba(59,130,246,.6)', 'rgba(245,158,11,.6)', 'rgba(16,185,129,.6)'
+    ][i]
+  }))
+}, {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } }, tooltip: {
+    callbacks: {
+      label: ctx => {
+        const c = COMBO[ctx.datasetIndex];
+        return [` 광고비: ₩${N(c.cost)}`, ` 전환수: ${c.conv}`, ` 전환매출: ₩${N(c.rev)}`, ` ROAS: ${roas(c.rev,c.cost)}%`];
+      }
+    }
+  }},
+  scales: {
+    x: { title: { display: true, text: '광고비 (₩)', color: '#475569' }, ticks: { color: '#475569' }, grid: { color: '#1a2235' } },
+    y: { title: { display: true, text: '전환수', color: '#475569' }, ticks: { color: '#475569' }, grid: { color: '#1a2235' } }
+  }
+});
+</script>
+</body>
+</html>
