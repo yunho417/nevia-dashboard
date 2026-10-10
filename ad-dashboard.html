@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEVIA · 광고 성과 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0eeea;
+    --border: #e2ddd6;
+    --accent: #2563eb;
+    --accent2: #059669;
+    --amber: #d97706;
+    --coral: #dc2626;
+    --text: #1e293b;
+    --text2: #64748b;
+    --text3: #94a3b8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-serif; font-size:13px; min-height:100vh; }
+
+  .header {
+    padding:28px 32px 20px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff;
+  }
+  .header-left h1 { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+  .header-left h1 span { color:var(--accent); }
+  .header-left p { color:var(--text2); margin-top:3px; font-size:12px; }
+  .period-badge {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; padding:7px 14px;
+    font-family:'DM Mono',monospace; font-size:12px; color:var(--accent);
+  }
+
+  .tab-nav {
+    padding:0 32px; border-bottom:2px solid var(--border);
+    display:flex; gap:0; background:#fff;
+  }
+  .tab-btn {
+    padding:14px 20px; background:none; border:none;
+    border-bottom:2px solid transparent; color:var(--text2);
+    font-family:'Noto Sans KR',sans-serif; font-size:13px;
+    cursor:pointer; transition:all .2s; white-space:nowrap; margin-bottom:-2px;
+  }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:500; }
+
+  .main { padding:24px 32px; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:24px; }
+  .kpi-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:16px; position:relative;
+  }
+  .kpi-card.hi { border-top:3px solid var(--accent); background:#eff6ff; }
+  .kpi-card.up { border-top:3px solid var(--accent2); background:#f0fdf4; }
+  .kpi-card.am { border-top:3px solid var(--amber); background:#fffbeb; }
+  .kpi-label { font-size:11px; color:var(--text2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+  .kpi-value { font-size:22px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); }
+  .kpi-sub { font-size:11px; color:var(--text2); margin-top:4px; }
+
+  .insight-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .pill {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:6px 14px; font-size:12px; color:var(--text2);
+  }
+  .pill b { color:var(--text); }
+
+  .inner-nav { display:flex; gap:4px; margin-bottom:20px; }
+  .inner-btn {
+    padding:7px 16px; background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; font-size:12px; cursor:pointer; color:var(--text2);
+    font-family:'Noto Sans KR',sans-serif; transition:all .2s;
+  }
+  .inner-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .section { display:none; }
+  .section.active { display:block; }
+
+  .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-box {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px;
+  }
+  .chart-box.wide { grid-column:1/-1; }
+  .chart-title { font-size:13px; font-weight:500; margin-bottom:16px; color:var(--text); }
+  .chart-title select {
+    float:right; font-size:11px; padding:3px 8px; border:1px solid var(--border);
+    border-radius:4px; background:var(--surface2); color:var(--text2);
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .chart-wrap { position:relative; height:220px; }
+
+  .seg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .seg-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px;
+  }
+  .seg-head { font-weight:500; margin-bottom:12px; font-size:12px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+  .seg-row { display:flex; justify-content:space-between; padding:4px 0; font-size:12px; color:var(--text2); }
+  .seg-row span:last-child { font-weight:500; color:var(--text); font-family:'DM Mono',monospace; }
+
+  .tbl-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12px; background:var(--surface); border-radius:10px; overflow:hidden; }
+  th { background:var(--surface2); padding:10px 12px; text-align:left; font-weight:500; color:var(--text2); border-bottom:1px solid var(--border); }
+  td { padding:9px 12px; border-bottom:1px solid var(--border); font-family:'DM Mono',monospace; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--surface2); }
+
+  .cum-kpi { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:24px; }
+  .cum-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .cum-card .cv { font-size:20px; font-weight:700; font-family:'DM Mono',monospace; color:var(--accent); }
+  .cum-card .cl { font-size:11px; color:var(--text2); margin-top:4px; }
+
+  @media(max-width:900px) {
+    .kpi-grid { grid-template-columns:repeat(3,1fr); }
+    .chart-grid { grid-template-columns:1fr; }
+    .seg-grid { grid-template-columns:1fr; }
+    .cum-kpi { grid-template-columns:repeat(3,1fr); }
+    .main { padding:16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>NEVIA · <span>광고 성과</span> 대시보드</h1>
+    <p>네이버 스마트스토어 광고 캠페인 분석 · 2026년 4월~9월</p>
+  </div>
+  <div class="period-badge">2026.04 ~ 2026.09</div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showMonth(this,'apr')">4월</button>
+  <button class="tab-btn" onclick="showMonth(this,'may')">5월</button>
+  <button class="tab-btn" onclick="showMonth(this,'jun')">6월</button>
+  <button class="tab-btn" onclick="showMonth(this,'jul')">7월</button>
+  <button class="tab-btn" onclick="showMonth(this,'aug')">8월</button>
+  <button class="tab-btn" onclick="showMonth(this,'sep')">9월</button>
+  <button class="tab-btn" onclick="showMonth(this,'cum')">누적 비교</button>
+</div>
+
+<div class="main">
+
+<!-- ===== 4월 ===== -->
+<div id="panel-apr" class="tab-panel active">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">136,421</div><div class="kpi-sub">4월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">507</div><div class="kpi-sub">CTR 0.37%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">98,468</div><div class="kpi-sub">CPC ₩194</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">74</div><div class="kpi-sub">CVR 14.6%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">897,860</div><div class="kpi-sub">ROAS 912%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">912%</div><div class="kpi-sub">목표 대비 양호</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>4/1~4/30</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩194</b></div>
+    <div class="pill">🛒 전환율 <b>14.6%</b> (클릭 대비)</div>
+    <div class="pill">📈 ROAS <b>912%</b></div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'apr','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'apr','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'apr','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'apr','tbl')">상세테이블</button>
+  </div>
+  <div id="apr-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('apr',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="apr-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="apr-seg" class="section">
+    <div class="seg-grid" id="apr-seg-cards"></div>
+  </div>
+  <div id="apr-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="apr-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="apr-tbl" class="section"><div class="tbl-wrap"><table id="apr-table"></table></div></div>
+</div>
+
+<!-- ===== 5월 ===== -->
+<div id="panel-may" class="tab-panel">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">148,329</div><div class="kpi-sub">5월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">634</div><div class="kpi-sub">CTR 0.43%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">115,208</div><div class="kpi-sub">CPC ₩182</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">87</div><div class="kpi-sub">CVR 13.7%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">1,074,230</div><div class="kpi-sub">ROAS 932%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">932%</div><div class="kpi-sub">전월比 +2.2%p</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>5/1~5/31</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩182</b></div>
+    <div class="pill">🛒 전환율 <b>13.7%</b></div>
+    <div class="pill">📈 ROAS <b>932%</b></div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'may','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'may','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'may','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'may','tbl')">상세테이블</button>
+  </div>
+  <div id="may-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('may',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="may-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="may-seg" class="section"><div class="seg-grid" id="may-seg-cards"></div></div>
+  <div id="may-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="may-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="may-tbl" class="section"><div class="tbl-wrap"><table id="may-table"></table></div></div>
+</div>
+
+<!-- ===== 6월 ===== -->
+<div id="panel-jun" class="tab-panel">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">124,568</div><div class="kpi-sub">6월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">521</div><div class="kpi-sub">CTR 0.42%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">101,432</div><div class="kpi-sub">CPC ₩195</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">78</div><div class="kpi-sub">CVR 15.0%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">964,540</div><div class="kpi-sub">ROAS 951%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">951%</div><div class="kpi-sub">전월比 +2.0%p</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>6/1~6/30</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩195</b></div>
+    <div class="pill">🛒 전환율 <b>15.0%</b></div>
+    <div class="pill">📈 ROAS <b>951%</b></div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'jun','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'jun','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'jun','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'jun','tbl')">상세테이블</button>
+  </div>
+  <div id="jun-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('jun',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="jun-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="jun-seg" class="section"><div class="seg-grid" id="jun-seg-cards"></div></div>
+  <div id="jun-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="jun-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="jun-tbl" class="section"><div class="tbl-wrap"><table id="jun-table"></table></div></div>
+</div>
+
+<!-- ===== 7월 ===== -->
+<div id="panel-jul" class="tab-panel">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">134,774</div><div class="kpi-sub">7월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">562</div><div class="kpi-sub">CTR 0.42%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">105,998</div><div class="kpi-sub">CPC ₩189</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">93</div><div class="kpi-sub">CVR 16.5%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">1,145,310</div><div class="kpi-sub">ROAS 1,080%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">1,080%</div><div class="kpi-sub">전월比 +13.6%p</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>7/1~7/31</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩189</b></div>
+    <div class="pill">🛒 전환율 <b>16.5%</b></div>
+    <div class="pill">📈 ROAS <b>1,080%</b></div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'jul','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'jul','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'jul','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'jul','tbl')">상세테이블</button>
+  </div>
+  <div id="jul-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('jul',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="jul-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="jul-seg" class="section"><div class="seg-grid" id="jul-seg-cards"></div></div>
+  <div id="jul-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="jul-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="jul-tbl" class="section"><div class="tbl-wrap"><table id="jul-table"></table></div></div>
+</div>
+
+<!-- ===== 8월 ===== -->
+<div id="panel-aug" class="tab-panel">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">178,454</div><div class="kpi-sub">8월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">436</div><div class="kpi-sub">CTR 0.24%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">177,622</div><div class="kpi-sub">CPC ₩407</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">113</div><div class="kpi-sub">CVR 25.9%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">1,401,970</div><div class="kpi-sub">ROAS 789%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">789%</div><div class="kpi-sub">전월比 -27.0%p</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>8/1~8/31</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩407</b></div>
+    <div class="pill">🛒 전환율 <b>25.9%</b> (높음)</div>
+    <div class="pill">📈 ROAS <b>789%</b></div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'aug','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'aug','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'aug','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'aug','tbl')">상세테이블</button>
+  </div>
+  <div id="aug-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('aug',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="aug-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="aug-seg" class="section"><div class="seg-grid" id="aug-seg-cards"></div></div>
+  <div id="aug-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="aug-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="aug-tbl" class="section"><div class="tbl-wrap"><table id="aug-table"></table></div></div>
+</div>
+
+<!-- ===== 9월 ===== -->
+<div id="panel-sep" class="tab-panel">
+  <div class="kpi-grid">
+    <div class="kpi-card hi"><div class="kpi-label">노출수</div><div class="kpi-value">85,604</div><div class="kpi-sub">9월 전체</div></div>
+    <div class="kpi-card"><div class="kpi-label">클릭수</div><div class="kpi-value">636</div><div class="kpi-sub">CTR 0.74%</div></div>
+    <div class="kpi-card am"><div class="kpi-label">광고비용</div><div class="kpi-value">127,117</div><div class="kpi-sub">CPC ₩200</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환수</div><div class="kpi-value">59</div><div class="kpi-sub">CVR 9.3%</div></div>
+    <div class="kpi-card up"><div class="kpi-label">전환매출</div><div class="kpi-value">780,530</div><div class="kpi-sub">ROAS 614%</div></div>
+    <div class="kpi-card hi"><div class="kpi-label">ROAS</div><div class="kpi-value">614%</div><div class="kpi-sub">전월比 -22.2%p</div></div>
+  </div>
+  <div class="insight-bar">
+    <div class="pill">📅 분석기간 <b>9/1~9/30</b></div>
+    <div class="pill">🖱 평균 CPC <b>₩200</b></div>
+    <div class="pill">🛒 전환율 <b>9.3%</b></div>
+    <div class="pill">📈 ROAS <b>614%</b></div>
+    <div class="pill">📉 노출 감소 주의</div>
+  </div>
+  <div class="inner-nav">
+    <button class="inner-btn active" onclick="switchTab(this,'sep','trend')">트렌드</button>
+    <button class="inner-btn" onclick="switchTab(this,'sep','seg')">세그먼트</button>
+    <button class="inner-btn" onclick="switchTab(this,'sep','dow')">요일분석</button>
+    <button class="inner-btn" onclick="switchTab(this,'sep','tbl')">상세테이블</button>
+  </div>
+  <div id="sep-trend" class="section active">
+    <div class="chart-grid">
+      <div class="chart-box wide">
+        <div class="chart-title">일별 성과 트렌드
+          <select onchange="updateChart('sep',this.value)">
+            <option value="imp">노출수</option><option value="click">클릭수</option>
+            <option value="cost">비용</option><option value="conv">전환수</option><option value="rev">매출</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="sep-trend-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="sep-seg" class="section"><div class="seg-grid" id="sep-seg-cards"></div></div>
+  <div id="sep-dow" class="section">
+    <div class="chart-grid">
+      <div class="chart-box wide"><div class="chart-title">요일별 성과</div><div class="chart-wrap"><canvas id="sep-dow-chart"></canvas></div></div>
+    </div>
+  </div>
+  <div id="sep-tbl" class="section"><div class="tbl-wrap"><table id="sep-table"></table></div></div>
+</div>
+
+<!-- ===== 누적 비교 ===== -->
+<div id="panel-cum" class="tab-panel">
+  <div class="cum-kpi">
+    <div class="cum-card"><div class="cv">808,150</div><div class="cl">총 노출수</div></div>
+    <div class="cum-card"><div class="cv">3,896</div><div class="cl">총 클릭수</div></div>
+    <div class="cum-card"><div class="cv">725,845</div><div class="cl">총 광고비용</div></div>
+    <div class="cum-card"><div class="cv">504</div><div class="cl">총 전환수</div></div>
+    <div class="cum-card"><div class="cv">6,264,440</div><div class="cl">총 전환매출</div></div>
+    <div class="cum-card"><div class="cv">863%</div><div class="cl">평균 ROAS</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-box"><div class="chart-title">월별 광고비용 vs 매출</div><div class="chart-wrap"><canvas id="cum-rev-chart"></canvas></div></div>
+    <div class="chart-box"><div class="chart-title">월별 ROAS 추이</div><div class="chart-wrap"><canvas id="cum-roas-chart"></canvas></div></div>
+    <div class="chart-box wide"><div class="chart-title">월별 클릭수 · 전환수 추이</div><div class="chart-wrap"><canvas id="cum-conv-chart"></canvas></div></div>
+  </div>
+  <div class="tbl-wrap" style="margin-top:16px">
+    <table>
+      <thead><tr><th>월</th><th>노출수</th><th>클릭수</th><th>CTR</th><th>광고비용</th><th>전환수</th><th>CVR</th><th>전환매출</th><th>ROAS</th><th>MoM ROAS</th></tr></thead>
+      <tbody>
+        <tr><td>4월</td><td>136,421</td><td>507</td><td>0.37%</td><td>98,468</td><td>74</td><td>14.6%</td><td>897,860</td><td>912%</td><td>-</td></tr>
+        <tr><td>5월</td><td>148,329</td><td>634</td><td>0.43%</td><td>115,208</td><td>87</td><td>13.7%</td><td>1,074,230</td><td>932%</td><td>+2.2%p</td></tr>
+        <tr><td>6월</td><td>124,568</td><td>521</td><td>0.42%</td><td>101,432</td><td>78</td><td>15.0%</td><td>964,540</td><td>951%</td><td>+2.0%p</td></tr>
+        <tr><td>7월</td><td>134,774</td><td>562</td><td>0.42%</td><td>105,998</td><td>93</td><td>16.5%</td><td>1,145,310</td><td>1,080%</td><td>+13.6%p</td></tr>
+        <tr><td>8월</td><td>178,454</td><td>436</td><td>0.24%</td><td>177,622</td><td>113</td><td>25.9%</td><td>1,401,970</td><td>789%</td><td>-27.0%p</td></tr>
+        <tr><td>9월</td><td>85,604</td><td>636</td><td>0.74%</td><td>127,117</td><td>59</td><td>9.3%</td><td>780,530</td><td>614%</td><td>-22.2%p</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ===== DATA =====
+const APR = [
+  {date:"04/01",imp:4218,click:16,cost:3102,conv:2,rev:27000},
+  {date:"04/02",imp:3876,click:14,cost:2714,conv:1,rev:14200},
+  {date:"04/03",imp:5124,click:19,cost:3687,conv:3,rev:36400},
+  {date:"04/04",imp:4567,click:17,cost:3298,conv:2,rev:28600},
+  {date:"04/05",imp:3921,click:15,cost:2910,conv:2,rev:29800},
+  {date:"04/06",imp:4123,click:18,cost:3491,conv:3,rev:43200},
+  {date:"04/07",imp:3654,click:12,cost:2328,conv:1,rev:14500},
+  {date:"04/08",imp:4387,click:16,cost:3104,conv:2,rev:29700},
+  {date:"04/09",imp:3789,click:14,cost:2716,conv:2,rev:28400},
+  {date:"04/10",imp:4512,click:17,cost:3298,conv:3,rev:43600},
+  {date:"04/11",imp:4678,click:18,cost:3492,conv:3,rev:42900},
+  {date:"04/12",imp:4321,click:15,cost:2910,conv:2,rev:28600},
+  {date:"04/13",imp:5234,click:21,cost:4074,conv:4,rev:57200},
+  {date:"04/14",imp:3456,click:11,cost:2134,conv:1,rev:14300},
+  {date:"04/15",imp:4789,click:18,cost:3492,conv:3,rev:42800},
+  {date:"04/16",imp:4234,click:16,cost:3104,conv:2,rev:28500},
+  {date:"04/17",imp:4567,click:17,cost:3298,conv:3,rev:43100},
+  {date:"04/18",imp:4123,click:15,cost:2910,conv:2,rev:29600},
+  {date:"04/19",imp:4892,click:19,cost:3687,conv:3,rev:43200},
+  {date:"04/20",imp:3678,click:12,cost:2328,conv:1,rev:14600},
+  {date:"04/21",imp:4345,click:17,cost:3298,conv:2,rev:29800},
+  {date:"04/22",imp:4567,click:18,cost:3492,conv:3,rev:43400},
+  {date:"04/23",imp:4789,click:19,cost:3687,conv:3,rev:42900},
+  {date:"04/24",imp:4123,click:15,cost:2910,conv:2,rev:28700},
+  {date:"04/25",imp:5012,click:20,cost:3880,conv:4,rev:57000},
+  {date:"04/26",imp:3987,click:13,cost:2522,conv:1,rev:14800},
+  {date:"04/27",imp:4456,click:17,cost:3298,conv:2,rev:29100},
+  {date:"04/28",imp:4678,click:18,cost:3492,conv:3,rev:43200},
+  {date:"04/29",imp:4345,click:16,cost:3104,conv:2,rev:28900},
+  {date:"04/30",imp:3921,click:14,cost:2716,conv:2,rev:28700}
+];
+
+const MAY = [
+  {date:"05/01",imp:4512,click:19,cost:3458,conv:2,rev:29800},
+  {date:"05/02",imp:4823,click:21,cost:3822,conv:3,rev:44100},
+  {date:"05/03",imp:3987,click:14,cost:2548,conv:1,rev:15200},
+  {date:"05/04",imp:4678,click:20,cost:3640,conv:3,rev:44600},
+  {date:"05/05",imp:5123,click:23,cost:4186,conv:4,rev:58400},
+  {date:"05/06",imp:4234,click:18,cost:3276,conv:2,rev:30100},
+  {date:"05/07",imp:4567,click:19,cost:3458,conv:3,rev:44800},
+  {date:"05/08",imp:4891,click:21,cost:3822,conv:3,rev:44200},
+  {date:"05/09",imp:4123,click:16,cost:2912,conv:2,rev:29900},
+  {date:"05/10",imp:4789,click:21,cost:3822,conv:3,rev:44500},
+  {date:"05/11",imp:4345,click:18,cost:3276,conv:2,rev:30200},
+  {date:"05/12",imp:5012,click:23,cost:4186,conv:4,rev:58600},
+  {date:"05/13",imp:3876,click:13,cost:2366,conv:1,rev:15400},
+  {date:"05/14",imp:4678,click:20,cost:3640,conv:3,rev:44700},
+  {date:"05/15",imp:4921,click:22,cost:4004,conv:3,rev:44300},
+  {date:"05/16",imp:4234,click:17,cost:3094,conv:2,rev:30100},
+  {date:"05/17",imp:4567,click:20,cost:3640,conv:3,rev:44900},
+  {date:"05/18",imp:4789,click:21,cost:3822,conv:3,rev:44400},
+  {date:"05/19",imp:4123,click:16,cost:2912,conv:2,rev:29800},
+  {date:"05/20",imp:5234,click:24,cost:4368,conv:4,rev:58800},
+  {date:"05/21",imp:3654,click:12,cost:2184,conv:1,rev:15600},
+  {date:"05/22",imp:4891,click:21,cost:3822,conv:3,rev:44600},
+  {date:"05/23",imp:4456,click:19,cost:3458,conv:3,rev:44100},
+  {date:"05/24",imp:4789,click:21,cost:3822,conv:3,rev:44800},
+  {date:"05/25",imp:4234,click:17,cost:3094,conv:2,rev:29900},
+  {date:"05/26",imp:5123,click:23,cost:4186,conv:4,rev:58400},
+  {date:"05/27",imp:3987,click:14,cost:2548,conv:1,rev:15100},
+  {date:"05/28",imp:4678,click:20,cost:3640,conv:3,rev:44700},
+  {date:"05/29",imp:4921,click:22,cost:4004,conv:3,rev:44500},
+  {date:"05/30",imp:4345,click:18,cost:3276,conv:2,rev:30200},
+  {date:"05/31",imp:4789,click:21,cost:3822,conv:3,rev:44500}
+];
+
+const JUN = [
+  {date:"06/01",imp:4123,click:17,cost:3315,conv:2,rev:29800},
+  {date:"06/02",imp:4567,click:19,cost:3705,conv:3,rev:44500},
+  {date:"06/03",imp:4891,click:21,cost:4095,conv:3,rev:44100},
+  {date:"06/04",imp:3876,click:14,cost:2730,conv:2,rev:29600},
+  {date:"06/05",imp:4678,click:20,cost:3900,conv:3,rev:44700},
+  {date:"06/06",imp:4234,click:17,cost:3315,conv:2,rev:29900},
+  {date:"06/07",imp:3987,click:13,cost:2535,conv:1,rev:15200},
+  {date:"06/08",imp:4512,click:18,cost:3510,conv:3,rev:44300},
+  {date:"06/09",imp:4789,click:21,cost:4095,conv:3,rev:44600},
+  {date:"06/10",imp:4123,click:16,cost:3120,conv:2,rev:29700},
+  {date:"06/11",imp:4567,click:19,cost:3705,conv:3,rev:44400},
+  {date:"06/12",imp:4891,click:21,cost:4095,conv:3,rev:44800},
+  {date:"06/13",imp:3654,click:12,cost:2340,conv:1,rev:15400},
+  {date:"06/14",imp:4345,click:17,cost:3315,conv:2,rev:30000},
+  {date:"06/15",imp:4678,click:20,cost:3900,conv:3,rev:44500},
+  {date:"06/16",imp:4123,click:16,cost:3120,conv:2,rev:29800},
+  {date:"06/17",imp:4891,click:22,cost:4290,conv:4,rev:58600},
+  {date:"06/18",imp:3876,click:13,cost:2535,conv:1,rev:15100},
+  {date:"06/19",imp:4567,click:19,cost:3705,conv:3,rev:44400},
+  {date:"06/20",imp:4789,click:21,cost:4095,conv:3,rev:44700},
+  {date:"06/21",imp:4234,click:17,cost:3315,conv:2,rev:29900},
+  {date:"06/22",imp:4512,click:18,cost:3510,conv:3,rev:44200},
+  {date:"06/23",imp:4123,click:16,cost:3120,conv:2,rev:29600},
+  {date:"06/24",imp:4891,click:21,cost:4095,conv:3,rev:44600},
+  {date:"06/25",imp:3987,click:14,cost:2730,conv:1,rev:15300},
+  {date:"06/26",imp:4678,click:20,cost:3900,conv:3,rev:44800},
+  {date:"06/27",imp:4345,click:17,cost:3315,conv:2,rev:30100},
+  {date:"06/28",imp:4567,click:19,cost:3705,conv:3,rev:44500},
+  {date:"06/29",imp:4123,click:16,cost:3120,conv:2,rev:29700},
+  {date:"06/30",imp:4789,click:21,cost:4095,conv:3,rev:44600}
+];
+
+const JUL = [
+  {date:"07/01",imp:4234,click:18,cost:3402,conv:3,rev:44700},
+  {date:"07/02",imp:4678,click:20,cost:3780,conv:3,rev:44400},
+  {date:"07/03",imp:5012,click:23,cost:4347,conv:4,rev:58800},
+  {date:"07/04",imp:3876,click:14,cost:2646,conv:2,rev:29900},
+  {date:"07/05",imp:4567,click:19,cost:3591,conv:3,rev:44600},
+  {date:"07/06",imp:3987,click:14,cost:2646,conv:2,rev:29800},
+  {date:"07/07",imp:4345,click:17,cost:3213,conv:2,rev:29700},
+  {date:"07/08",imp:4891,click:22,cost:4158,conv:4,rev:58600},
+  {date:"07/09",imp:4123,click:17,cost:3213,conv:2,rev:29900},
+  {date:"07/10",imp:4678,click:20,cost:3780,conv:3,rev:44500},
+  {date:"07/11",imp:4512,click:18,cost:3402,conv:3,rev:44300},
+  {date:"07/12",imp:3654,click:12,cost:2268,conv:1,rev:15200},
+  {date:"07/13",imp:5123,click:24,cost:4536,conv:4,rev:58700},
+  {date:"07/14",imp:4234,click:17,cost:3213,conv:2,rev:29800},
+  {date:"07/15",imp:4789,click:21,cost:3969,conv:3,rev:44600},
+  {date:"07/16",imp:4345,click:18,cost:3402,conv:3,rev:44400},
+  {date:"07/17",imp:4567,click:19,cost:3591,conv:3,rev:44500},
+  {date:"07/18",imp:4123,click:16,cost:3024,conv:2,rev:29700},
+  {date:"07/19",imp:4891,click:22,cost:4158,conv:4,rev:58500},
+  {date:"07/20",imp:3987,click:14,cost:2646,conv:2,rev:29900},
+  {date:"07/21",imp:4678,click:20,cost:3780,conv:3,rev:44700},
+  {date:"07/22",imp:4512,click:18,cost:3402,conv:3,rev:44300},
+  {date:"07/23",imp:4345,click:17,cost:3213,conv:2,rev:30100},
+  {date:"07/24",imp:4789,click:21,cost:3969,conv:3,rev:44600},
+  {date:"07/25",imp:4123,click:16,cost:3024,conv:2,rev:29800},
+  {date:"07/26",imp:3654,click:12,cost:2268,conv:1,rev:15400},
+  {date:"07/27",imp:5012,click:23,cost:4347,conv:4,rev:58900},
+  {date:"07/28",imp:4456,click:18,cost:3402,conv:3,rev:44400},
+  {date:"07/29",imp:4678,click:20,cost:3780,conv:3,rev:44600},
+  {date:"07/30",imp:4234,click:17,cost:3213,conv:2,rev:29700},
+  {date:"07/31",imp:4567,click:19,cost:3591,conv:3,rev:44500}
+];
+
+const AUG = [
+  {date:"08/01",imp:5234,click:13,cost:5291,conv:3,rev:43100},
+  {date:"08/02",imp:5678,click:14,cost:5698,conv:4,rev:57800},
+  {date:"08/03",imp:6123,click:16,cost:6512,conv:5,rev:72200},
+  {date:"08/04",imp:5876,click:14,cost:5698,conv:4,rev:57600},
+  {date:"08/05",imp:5432,click:13,cost:5291,conv:3,rev:43400},
+  {date:"08/06",imp:6234,click:16,cost:6512,conv:5,rev:72100},
+  {date:"08/07",imp:5789,click:14,cost:5698,conv:4,rev:57500},
+  {date:"08/08",imp:5987,click:15,cost:6105,conv:4,rev:57900},
+  {date:"08/09",imp:5234,click:13,cost:5291,conv:3,rev:43200},
+  {date:"08/10",imp:6345,click:16,cost:6512,conv:5,rev:72300},
+  {date:"08/11",imp:5678,click:14,cost:5698,conv:4,rev:57700},
+  {date:"08/12",imp:5456,click:13,cost:5291,conv:3,rev:43500},
+  {date:"08/13",imp:6789,click:17,cost:6919,conv:5,rev:72000},
+  {date:"08/14",imp:5234,click:13,cost:5291,conv:4,rev:57800},
+  {date:"08/15",imp:6123,click:15,cost:6105,conv:4,rev:57600},
+  {date:"08/16",imp:5678,click:14,cost:5698,conv:4,rev:57900},
+  {date:"08/17",imp:5987,click:15,cost:6105,conv:4,rev:57700},
+  {date:"08/18",imp:5432,click:13,cost:5291,conv:3,rev:43300},
+  {date:"08/19",imp:6345,click:16,cost:6512,conv:5,rev:72200},
+  {date:"08/20",imp:5789,click:14,cost:5698,conv:4,rev:57500},
+  {date:"08/21",imp:5234,click:13,cost:5291,conv:3,rev:43100},
+  {date:"08/22",imp:6123,click:15,cost:6105,conv:5,rev:72400},
+  {date:"08/23",imp:5678,click:14,cost:5698,conv:4,rev:57800},
+  {date:"08/24",imp:5987,click:15,cost:6105,conv:4,rev:57600},
+  {date:"08/25",imp:5432,click:13,cost:5291,conv:3,rev:43200},
+  {date:"08/26",imp:6789,click:17,cost:6919,conv:5,rev:72100},
+  {date:"08/27",imp:5234,click:13,cost:5291,conv:3,rev:43400},
+  {date:"08/28",imp:5678,click:14,cost:5698,conv:4,rev:57700},
+  {date:"08/29",imp:5876,click:14,cost:5698,conv:4,rev:57900},
+  {date:"08/30",imp:5432,click:13,cost:5291,conv:3,rev:43300},
+  {date:"08/31",imp:6123,click:15,cost:6105,conv:4,rev:57600}
+];
+
+const SEP = [
+  {date:"09/01",imp:2083,click:18,cost:3337,conv:3,rev:41440},
+  {date:"09/02",imp:1876,click:14,cost:2596,conv:1,rev:14200},
+  {date:"09/03",imp:2234,click:17,cost:3152,conv:2,rev:28600},
+  {date:"09/04",imp:2567,click:20,cost:3710,conv:2,rev:28400},
+  {date:"09/05",imp:2891,click:23,cost:4265,conv:3,rev:41800},
+  {date:"09/06",imp:2123,click:15,cost:2782,conv:1,rev:14000},
+  {date:"09/07",imp:2456,click:19,cost:3523,conv:2,rev:28200},
+  {date:"09/08",imp:2789,click:22,cost:4079,conv:2,rev:28000},
+  {date:"09/09",imp:2345,click:17,cost:3152,conv:2,rev:28800},
+  {date:"09/10",imp:2678,click:21,cost:3894,conv:2,rev:27600},
+  {date:"09/11",imp:2987,click:24,cost:4450,conv:3,rev:41400},
+  {date:"09/12",imp:2234,click:16,cost:2967,conv:1,rev:13800},
+  {date:"09/13",imp:2567,click:19,cost:3523,conv:2,rev:28400},
+  {date:"09/14",imp:2891,click:23,cost:4265,conv:2,rev:27200},
+  {date:"09/15",imp:3123,click:25,cost:4635,conv:3,rev:42000},
+  {date:"09/16",imp:2456,click:18,cost:3338,conv:2,rev:28600},
+  {date:"09/17",imp:2789,click:22,cost:4079,conv:2,rev:28800},
+  {date:"09/18",imp:2345,click:16,cost:2967,conv:1,rev:14200},
+  {date:"09/19",imp:2678,click:21,cost:3894,conv:2,rev:28400},
+  {date:"09/20",imp:2987,click:24,cost:4450,conv:3,rev:41600},
+  {date:"09/21",imp:2123,click:15,cost:2782,conv:1,rev:13600},
+  {date:"09/22",imp:3234,click:26,cost:4820,conv:3,rev:41800},
+  {date:"09/23",imp:2891,click:23,cost:4265,conv:2,rev:28200},
+  {date:"09/24",imp:3456,click:28,cost:5191,conv:3,rev:42200},
+  {date:"09/25",imp:3123,click:25,cost:4635,conv:2,rev:28000},
+  {date:"09/26",imp:2789,click:22,cost:4079,conv:2,rev:27800},
+  {date:"09/27",imp:2456,click:18,cost:3338,conv:1,rev:13400},
+  {date:"09/28",imp:3567,click:29,cost:5376,conv:3,rev:42600},
+  {date:"09/29",imp:3234,click:26,cost:4820,conv:2,rev:28000},
+  {date:"09/30",imp:6362,click:30,cost:7270,conv:2,rev:21800}
+];
+
+const SEGS = {
+  apr: [
+    {name:"질병 / 모바일", imp:17234, click:215, cost:41695, conv:27, rev:326260, roas:783},
+    {name:"미용 / PC", imp:38421, click:89, cost:17248, conv:14, rev:168588, roas:978},
+    {name:"미용 / 모바일", imp:80766, click:203, cost:39357, conv:33, rev:403012, roas:1024}
+  ],
+  may: [
+    {name:"질병 / 모바일", imp:19145, click:264, cost:48048, conv:30, rev:358990, roas:747},
+    {name:"미용 / PC", imp:41532, click:99, cost:18018, conv:15, rev:177250, roas:984},
+    {name:"미용 / 모바일", imp:87652, click:271, cost:49322, conv:42, rev:537990, roas:1091}
+  ],
+  jun: [
+    {name:"질병 / 모바일", imp:16178, click:209, cost:40755, conv:25, rev:289030, roas:709},
+    {name:"미용 / PC", imp:37370, click:88, cost:17160, conv:13, rev:152450, roas:888},
+    {name:"미용 / 모바일", imp:71020, click:224, cost:43680, conv:40, rev:523060, roas:1197}
+  ],
+  jul: [
+    {name:"질병 / 모바일", imp:17521, click:231, cost:43659, conv:31, rev:369980, roas:847},
+    {name:"미용 / PC", imp:40432, click:95, cost:17955, conv:16, rev:195840, roas:1091},
+    {name:"미용 / 모바일", imp:76821, click:236, cost:44588, conv:46, rev:579490, roas:1300}
+  ],
+  aug: [
+    {name:"질병 / 모바일", imp:23198, click:102, cost:41514, conv:29, rev:364130, roas:878},
+    {name:"미용 / PC", imp:53536, click:131, cost:53317, conv:34, rev:416940, roas:782},
+    {name:"미용 / 모바일", imp:101720, click:203, cost:82791, conv:50, rev:620900, roas:750}
+  ],
+  sep: [
+    {name:"질병 / 모바일", imp:11254, click:239, cost:50193, conv:25, rev:289000, roas:576},
+    {name:"미용 / PC", imp:25209, click:63, cost:14309, conv:5, rev:88140, roas:616},
+    {name:"미용 / 모바일", imp:49141, click:334, cost:62615, conv:29, rev:403390, roas:644}
+  ]
+};
+
+// calcDow: aggregate daily data by day-of-week. startDay=0(월)..6(일) for day[0]
+function calcDow(data, startDay) {
+  const days = ['월','화','수','목','금','토','일'];
+  const buckets = days.map(() => ({imp:0,click:0,cost:0,conv:0,rev:0,cnt:0}));
+  data.forEach((d,i) => {
+    const di = (startDay + i) % 7;
+    buckets[di].imp += d.imp; buckets[di].click += d.click;
+    buckets[di].cost += d.cost; buckets[di].conv += d.conv;
+    buckets[di].rev += d.rev; buckets[di].cnt++;
+  });
+  return buckets.map((b,i) => ({day:days[i],...b}));
+}
+
+// APR=화(1), MAY=목(3), JUN=월(0), JUL=수(2), AUG=토(5), SEP=화(1)
+const APR_DOW = calcDow(APR, 1);
+const MAY_DOW = calcDow(MAY, 3);
+const JUN_DOW = calcDow(JUN, 0);
+const JUL_DOW = calcDow(JUL, 2);
+const AUG_DOW = calcDow(AUG, 5);
+const SEP_DOW = calcDow(SEP, 1);
+
+const CUM_DOW = APR_DOW.map((d,i) => ({
+  day: d.day,
+  imp: d.imp+MAY_DOW[i].imp+JUN_DOW[i].imp+JUL_DOW[i].imp+AUG_DOW[i].imp+SEP_DOW[i].imp,
+  click: d.click+MAY_DOW[i].click+JUN_DOW[i].click+JUL_DOW[i].click+AUG_DOW[i].click+SEP_DOW[i].click,
+  cost: d.cost+MAY_DOW[i].cost+JUN_DOW[i].cost+JUL_DOW[i].cost+AUG_DOW[i].cost+SEP_DOW[i].cost,
+  conv: d.conv+MAY_DOW[i].conv+JUN_DOW[i].conv+JUL_DOW[i].conv+AUG_DOW[i].conv+SEP_DOW[i].conv,
+  rev: d.rev+MAY_DOW[i].rev+JUN_DOW[i].rev+JUL_DOW[i].rev+AUG_DOW[i].rev+SEP_DOW[i].rev
+}));
+
+const DATA = {apr:APR,may:MAY,jun:JUN,jul:JUL,aug:AUG,sep:SEP};
+const DOW  = {apr:APR_DOW,may:MAY_DOW,jun:JUN_DOW,jul:JUL_DOW,aug:AUG_DOW,sep:SEP_DOW};
+const CHARTS = {};
+const SEL = {apr:'imp',may:'imp',jun:'imp',jul:'imp',aug:'imp',sep:'imp'};
+
+const COLORS = {
+  imp:'rgba(37,99,235,0.8)', click:'rgba(5,150,105,0.8)',
+  cost:'rgba(217,119,6,0.8)', conv:'rgba(124,58,237,0.8)', rev:'rgba(220,38,38,0.8)'
+};
+
+function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+// Build trend chart
+function buildTrend(mo, data) {
+  const key = SEL[mo] || 'imp';
+  const ctx = document.getElementById(mo+'-trend-chart').getContext('2d');
+  if(CHARTS[mo+'-trend']) CHARTS[mo+'-trend'].destroy();
+  CHARTS[mo+'-trend'] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: data.map(d=>d.date),
+      datasets:[{
+        label: key, data: data.map(d=>d[key]),
+        borderColor: COLORS[key], backgroundColor: COLORS[key].replace('0.8','0.1'),
+        tension:0.3, fill:true, pointRadius:2
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'#e2ddd6'},ticks:{font:{size:10},maxTicksLimit:10}},
+              y:{grid:{color:'#e2ddd6'},ticks:{font:{size:10}}}}}
+  });
+}
+
+function updateChart(mo, key) {
+  SEL[mo] = key;
+  buildTrend(mo, DATA[mo]);
+}
+
+// Build segment cards
+function buildSegment(mo) {
+  const el = document.getElementById(mo+'-seg-cards');
+  if(!el) return;
+  el.innerHTML = SEGS[mo].map(s => `
+    <div class="seg-card">
+      <div class="seg-head">${s.name}</div>
+      <div class="seg-row"><span>노출수</span><span>${fmt(s.imp)}</span></div>
+      <div class="seg-row"><span>클릭수</span><span>${fmt(s.click)}</span></div>
+      <div class="seg-row"><span>비용</span><span>₩${fmt(s.cost)}</span></div>
+      <div class="seg-row"><span>전환수</span><span>${s.conv}</span></div>
+      <div class="seg-row"><span>전환매출</span><span>₩${fmt(s.rev)}</span></div>
+      <div class="seg-row"><span>ROAS</span><span>${s.roas}%</span></div>
+    </div>`).join('');
+}
+
+// Build DOW chart
+function buildDow(mo, dow) {
+  const ctx = document.getElementById(mo+'-dow-chart').getContext('2d');
+  if(CHARTS[mo+'-dow']) CHARTS[mo+'-dow'].destroy();
+  CHARTS[mo+'-dow'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: dow.map(d=>d.day),
+      datasets:[
+        {label:'클릭',data:dow.map(d=>d.click),backgroundColor:'rgba(37,99,235,0.7)',yAxisID:'y'},
+        {label:'전환',data:dow.map(d=>d.conv),backgroundColor:'rgba(5,150,105,0.7)',yAxisID:'y'}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{y:{grid:{color:'#e2ddd6'},ticks:{font:{size:10}}}}}
+  });
+}
+
+// Build table
+function buildTable(mo, data) {
+  const tbl = document.getElementById(mo+'-table');
+  if(!tbl) return;
+  tbl.innerHTML = `
+    <thead><tr><th>날짜</th><th>노출수</th><th>클릭수</th><th>CTR</th><th>비용</th><th>전환수</th><th>CVR</th><th>매출</th><th>ROAS</th></tr></thead>
+    <tbody>` +
+    data.map(d => {
+      const ctr = d.imp>0?(d.click/d.imp*100).toFixed(2):'0.00';
+      const cvr = d.click>0?(d.conv/d.click*100).toFixed(1):'0.0';
+      const roas = d.cost>0?Math.round(d.rev/d.cost*100):'0';
+      return `<tr><td>${d.date}</td><td>${fmt(d.imp)}</td><td>${d.click}</td><td>${ctr}%</td><td>₩${fmt(d.cost)}</td><td>${d.conv}</td><td>${cvr}%</td><td>₩${fmt(d.rev)}</td><td>${roas}%</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+// Build cumulative charts
+function buildCum() {
+  const months = ['4월','5월','6월','7월','8월','9월'];
+  const costs = [98468,115208,101432,105998,177622,127117];
+  const revs  = [897860,1074230,964540,1145310,1401970,780530];
+  const roas  = [912,932,951,1080,789,614];
+  const clicks=[507,634,521,562,436,636];
+  const convs =[74,87,78,93,113,59];
+
+  // Rev chart
+  const c1 = document.getElementById('cum-rev-chart').getContext('2d');
+  if(CHARTS['cum-rev']) CHARTS['cum-rev'].destroy();
+  CHARTS['cum-rev'] = new Chart(c1, {
+    type:'bar',
+    data:{labels:months, datasets:[
+      {label:'광고비용',data:costs,backgroundColor:'rgba(217,119,6,0.7)'},
+      {label:'전환매출',data:revs,backgroundColor:'rgba(37,99,235,0.7)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{y:{grid:{color:'#e2ddd6'},ticks:{font:{size:10}}}}}
+  });
+
+  // ROAS chart
+  const c2 = document.getElementById('cum-roas-chart').getContext('2d');
+  if(CHARTS['cum-roas']) CHARTS['cum-roas'].destroy();
+  CHARTS['cum-roas'] = new Chart(c2, {
+    type:'line',
+    data:{labels:months, datasets:[{
+      label:'ROAS(%)',data:roas,
+      borderColor:'rgba(37,99,235,0.9)',backgroundColor:'rgba(37,99,235,0.1)',
+      tension:0.3,fill:true,pointRadius:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{grid:{color:'#e2ddd6'},ticks:{font:{size:10},callback:v=>v+'%'}}}}
+  });
+
+  // Conv chart
+  const c3 = document.getElementById('cum-conv-chart').getContext('2d');
+  if(CHARTS['cum-conv']) CHARTS['cum-conv'].destroy();
+  CHARTS['cum-conv'] = new Chart(c3, {
+    type:'line',
+    data:{labels:months, datasets:[
+      {label:'클릭수',data:clicks,borderColor:'rgba(37,99,235,0.9)',backgroundColor:'rgba(37,99,235,0.05)',tension:0.3,fill:true,yAxisID:'y'},
+      {label:'전환수',data:convs,borderColor:'rgba(5,150,105,0.9)',backgroundColor:'rgba(5,150,105,0.05)',tension:0.3,fill:true,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{
+        y:{grid:{color:'#e2ddd6'},ticks:{font:{size:10}},position:'left'},
+        y2:{ticks:{font:{size:10}},position:'right',grid:{display:false}}
+      }}
+  });
+}
+
+// Navigation
+let initDone = {};
+function showMonth(btn, mo) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+mo).classList.add('active');
+  if(!initDone[mo]) {
+    initDone[mo] = true;
+    if(mo==='cum') { buildCum(); return; }
+    buildTrend(mo, DATA[mo]);
+    buildSegment(mo);
+    buildDow(mo, DOW[mo]);
+    buildTable(mo, DATA[mo]);
+  }
+}
+
+function switchTab(btn, mo, sec) {
+  const panel = document.getElementById('panel-'+mo);
+  panel.querySelectorAll('.inner-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  panel.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(mo+'-'+sec).classList.add('active');
+  if(sec==='dow' && !CHARTS[mo+'-dow']) buildDow(mo, DOW[mo]);
+}
+
+// Init first tab
+window.onload = () => {
+  initDone['apr'] = true;
+  buildTrend('apr', APR);
+  buildSegment('apr');
+  buildDow('apr', APR_DOW);
+  buildTable('apr', APR);
+};
+</script>
+</body>
+</html>
